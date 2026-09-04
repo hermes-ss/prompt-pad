@@ -11,18 +11,16 @@ Package `com.hermes.promptpad`. Kotlin + Compose, single activity, ~1.4k LOC, ze
   `./gradlew :app:assembleRelease`. R8-minified, signed, non-debuggable.
 - Test AVD `promptpad43` = 1080x1440 (4:3), android-35 google_apis x86_64, hw keyboard on.
 
-## Layout contract (matches the reference screenshot)
-Two-line lowercase date -> weather/battery caption -> 24-dot activity bar -> two bordered glance rows
-(next event, first open task + count badge) -> 4x2 tile grid. Accent `#f26609`, bg `#000000`,
-surfaces `#0E0E0E`, borders `#2A2A2A`.
+## Layout contract
+Two-line lowercase date -> weather/battery caption -> two bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette.
 
 ## Gestures
-Swipe up = drawer (auto-focused search, bottom-anchored). Swipe right = Hub. Swipe left = Settings.
-Long-press home = tile edit mode. Physical key long-press on home = mapped app launch.
+Swipe up = profile-aware drawer (personal + managed work apps, badged icons, auto-focused bottom search). Swipe right = Hub. Swipe left = Settings. Long-press blank Home area = shortcut edit mode. Double-tap blank Home area = sleep when enabled. Hidden status bar is transiently revealed by a top-edge swipe. Physical key long-press on Home = mapped app launch.
+
+## Removed surfaces
+Activity tracking and Focus/Monk restriction modes are intentionally purged, including their permissions, preferences, settings, service, resources, and tests.
 
 ## Deliberate simplifications (ponytail)
 - No weather feed: device is offline, the widget shows `—°` behind a toggle.
 - Notes/To-Do persist as JSON in SharedPreferences; swap for Room only if lists get large.
 - Clock tile fires the system `SHOW_ALARMS` intent — spec says use the device clock app.
-- Seal is a one-way pref flag; the spec's "factory reset only" holds because nothing in-app can clear it.
-- Focus/Monk blocking is an AccessibilityService, not DeviceAdmin: same block, no device-owner setup.

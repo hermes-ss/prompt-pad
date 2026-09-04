@@ -1,46 +1,82 @@
 package com.hermes.promptpad
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.graphics.drawable.Drawable
 import android.os.Process
+import android.os.UserManager
 
-data class AppEntry(val label: String, val pkg: String, val icon: Drawable?)
+data class AppEntry(
+    val label: String,
+    val pkg: String,
+    val activity: String,
+    val userSerial: Long,
+    val icon: Drawable?,
+) {
+    val spec: String get() = listOf(pkg, activity, userSerial.toString()).joinToString("\t")
+}
 
 object Apps {
     fun all(ctx: Context): List<AppEntry> {
-        val la = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        return la.getActivityList(null, Process.myUserHandle())
-            .map { AppEntry(it.label.toString(), it.applicationInfo.packageName, runCatching { it.getIcon(0) }.getOrNull()) }
-            .distinctBy { it.pkg }
-            .sortedBy { it.label.lowercase() }
+        val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val users = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        return launcher.profiles.flatMap { user ->
+            val serial = users.getSerialNumberForUser(user)
+            launcher.getActivityList(null, user).map { info ->
+                AppEntry(
+                    info.label.toString(),
+                    info.componentName.packageName,
+                    info.componentName.className,
+                    serial,
+                    runCatching { info.getBadgedIcon(0) }.getOrNull(),
+                )
+            }
+        }.distinctBy { Triple(it.pkg, it.activity, it.userSerial) }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
     }
 
-    fun label(ctx: Context, pkg: String): String = runCatching {
-        val pm = ctx.packageManager
-        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
-
-    fun launch(ctx: Context, pkg: String) {
-        val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { ctx.startActivity(i) }
+    fun fromSpec(ctx: Context, spec: String): AppEntry? {
+        val parts = spec.split('\t')
+        if (parts.size == 3) {
+            val serial = parts[2].toLongOrNull() ?: return null
+            return all(ctx).firstOrNull { it.pkg == parts[0] && it.activity == parts[1] && it.userSerial == serial }
+        }
+        return all(ctx).firstOrNull { it.pkg == spec }
     }
 
-    /** Prefix matches first, then substring — matches how people type on a physical keyboard. */
+    fun label(ctx: Context, spec: String): String = fromSpec(ctx, spec)?.label ?: spec.substringBefore('\t')
+
+    fun launch(ctx: Context, spec: String) {
+        val app = fromSpec(ctx, spec)
+        if (app != null) launch(ctx, app)
+        else ctx.packageManager.getLaunchIntentForPackage(spec)?.let {
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { ctx.startActivity(it) }
+        }
+    }
+
+    fun launch(ctx: Context, app: AppEntry) {
+        val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val users = ctx.getSystemService(Context.USER_SERVICE) as UserManager
+        val user = users.getUserForSerialNumber(app.userSerial) ?: Process.myUserHandle()
+        runCatching {
+            launcher.startMainActivity(ComponentName(app.pkg, app.activity), user, null, null)
+        }
+    }
+
     fun launchAction(ctx: Context, spec: String) {
         val parts = spec.split("|")
-        val i = Intent(parts[0]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (parts.size > 1) i.addCategory(parts[1])
-        runCatching { ctx.startActivity(i) }
+        val intent = Intent(parts[0]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (parts.size > 1) intent.addCategory(parts[1])
+        runCatching { ctx.startActivity(intent) }
     }
 
-    fun search(list: List<AppEntry>, q: String): List<AppEntry> {
-        if (q.isBlank()) return list
-        val n = q.lowercase()
-        val pre = list.filter { it.label.lowercase().startsWith(n) }
-        val sub = list.filter { !it.label.lowercase().startsWith(n) && it.label.lowercase().contains(n) }
-        return pre + sub
+    fun search(list: List<AppEntry>, query: String): List<AppEntry> {
+        if (query.isBlank()) return list
+        val q = query.lowercase()
+        val prefix = list.filter { it.label.lowercase().startsWith(q) }
+        return prefix + list.filter { !it.label.lowercase().startsWith(q) && it.label.lowercase().contains(q) }
     }
 }

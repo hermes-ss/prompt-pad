@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Prompt-Pad</string>
-    <string name="block_service_desc">Blocks distracting apps while Focus or Monk mode is active.</string>
+    <string name="tap_to_sleep_accessibility_label">Prompt-Pad tap to sleep</string>
+    <string name="tap_to_sleep_accessibility_description">Locks the screen when you double-tap a blank area on the Prompt-Pad home screen.</string>
 </resources>
