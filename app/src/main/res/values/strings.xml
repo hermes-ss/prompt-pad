@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Prompt-Pad</string>
+    <string name="block_service_desc">Blocks distracting apps while Focus or Monk mode is active.</string>
+</resources>
