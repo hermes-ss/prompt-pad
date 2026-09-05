@@ -74,7 +74,7 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
             ).padding(horizontal = 14.dp),
     ) {
         Column(Modifier.fillMaxSize()) {
-            if (!prefs.peakRight) Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(if (prefs.peakRight) 8.dp else 14.dp))
             PeakWidget(prefs, tick)
             Spacer(Modifier.height(16.dp))
             GlanceRows(nav, tick)
@@ -106,6 +106,8 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
     val ctx = LocalContext.current
     val now = remember(tick) { Date() }
     fun format(pattern: String) = SimpleDateFormat(pattern, Locale.getDefault()).format(now).lowercase()
+    fun openCalendar() = Apps.launchAction(ctx, "android.intent.action.MAIN|android.intent.category.APP_CALENDAR")
+    fun openClock() = Apps.launchAction(ctx, "android.intent.action.SHOW_ALARMS")
     val battery = remember(tick) {
         (ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
@@ -118,21 +120,18 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
         when (prefs.peakVariant) {
             1 -> {
                 val date = "${format("EEEE")}, ${format("MMMM d")}  ·  "
-                Text(
-                    buildAnnotatedString {
-                        append(date)
-                        withStyle(SpanStyle(color = Accent)) { append(format("HH:mm")) }
-                    },
-                    style = MaterialTheme.typography.headlineSmall,
-                )
+                Row {
+                    Text(date, Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
+                    Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
+                }
             }
             2 -> {
-                Text(format("HH:mm"), style = MaterialTheme.typography.headlineSmall, color = Accent)
-                Text("${format("EEEE")}, ${format("MMMM d")}", style = MaterialTheme.typography.bodyMedium, color = Dim)
+                Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
+                Text("${format("EEEE")}, ${format("MMMM d")}", Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.bodyMedium, color = Dim)
             }
             else -> {
-                Text("${format("EEEE")},", style = MaterialTheme.typography.headlineSmall)
-                Text(format("MMMM d"), style = MaterialTheme.typography.headlineSmall)
+                Text("${format("EEEE")},", Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
+                Text(format("MMMM d"), Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -148,7 +147,7 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
                 Spacer(Modifier.width(5.dp))
                 Text("$battery%", style = MaterialTheme.typography.bodySmall)
             }
-            if (prefs.peakVariant == 0) Text("   ${format("HH:mm")}", style = MaterialTheme.typography.bodySmall, color = Accent)
+            if (prefs.peakVariant == 0) Text("   ${format("HH:mm")}", Modifier.clickable { openClock() }, style = MaterialTheme.typography.bodySmall, color = Accent)
         }
     }
 }

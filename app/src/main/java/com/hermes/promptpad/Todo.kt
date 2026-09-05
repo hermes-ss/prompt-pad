@@ -39,8 +39,8 @@ fun TodoScreen(back: () -> Unit, autoFocusAdd: Boolean = false) {
         store.saveTasks(next); tasks = next; vanishing = null
     }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("to do", back)
+    Column(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal = Dim2.screen)) {
+        Header("to do", center = true)
         TextField(draft, { draft = it },
             Modifier.fillMaxWidth().focusRequester(fr),
             placeholder = { Text("Add a task...", color = DotIdle) }, singleLine = true,

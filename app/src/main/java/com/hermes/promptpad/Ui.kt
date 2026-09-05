@@ -42,11 +42,13 @@ fun Row48(onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-fun Header(text: String, back: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch), verticalAlignment = Alignment.CenterVertically) {
-        if (back != null) {
-            Text("‹", Modifier.clickable { back() }.padding(end = 12.dp), style = MaterialTheme.typography.headlineSmall)
-        }
+fun Header(text: String, back: (() -> Unit)? = null, center: Boolean = false) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = Dim2.touch),
+        horizontalArrangement = if (center) Arrangement.Center else Arrangement.Start,
+        verticalAlignment = if (center) Alignment.Top else Alignment.CenterVertically,
+    ) {
+        if (back != null) Text("‹", Modifier.clickable { back() }.padding(end = 12.dp), style = MaterialTheme.typography.headlineSmall)
         Text(text, style = MaterialTheme.typography.headlineSmall)
     }
 }

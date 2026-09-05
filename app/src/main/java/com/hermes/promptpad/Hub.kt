@@ -34,8 +34,8 @@ fun HubScreen(back: () -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("hub", back)
+    Column(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal = Dim2.screen)) {
+        Header("hub", center = true)
         Tabs(FILTERS, filter) { filter = it }
         Spacer(Modifier.height(Dim2.gap))
         if (!HubListener.isEnabled(ctx)) {

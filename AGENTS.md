@@ -12,7 +12,7 @@ Package `com.hermes.promptpad`. Kotlin + Compose, single activity, ~1.4k LOC, ze
 - Test AVD `promptpad43` = 1080x1440 (4:3), android-35 google_apis x86_64, hw keyboard on.
 
 ## Layout contract
-Two-line lowercase date -> weather/battery caption -> two 57dp bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette. The in-app clock is always orange. Right-aligned Peak variants intentionally start at the physical top edge because the device cutout is on the left; left-aligned variants retain safe top inset and spacing.
+Two-line lowercase date -> weather/battery caption -> two 57dp bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette. Peak dates open the system calendar; clocks open the system Clock alarm view. Right-aligned Peak variants have an 8dp top gap so curved corners do not clip the clock; left-aligned variants retain safe top inset and 14dp spacing. Hub, Notes, Agenda and To Do titles are top-centered with no in-app back arrow; their content begins after the 48dp title row.
 
 ## Icon contract
 Use the bundled Katapult monochrome icon set for mapped apps and system shortcuts. Note and To Do intentionally retain their PromptPad Material icons. Owner-profile apps may use bundled artwork; managed-profile apps keep Android's badged launcher icon so work-profile identity is not lost. Drawer icons use one fixed outer size.
