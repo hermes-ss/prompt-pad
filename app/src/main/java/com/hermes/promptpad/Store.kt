@@ -7,6 +7,8 @@ import org.json.JSONObject
 data class Note(val id: Long, var folder: String, var title: String, var body: String)
 data class Task(val id: Long, val text: String, val done: Boolean)
 
+fun visibleNoteFolder(folder: String): String = if (folder == "Journals") "Personal" else folder
+
 /** ponytail: JSON in SharedPreferences. Notes/tasks are tens of rows on a personal phone; no Room. */
 class Store(ctx: Context) {
     private val p = ctx.getSharedPreferences("promptpad_data", Context.MODE_PRIVATE)
@@ -15,7 +17,7 @@ class Store(ctx: Context) {
         val a = JSONArray(p.getString("notes", "[]"))
         return MutableList(a.length()) {
             val o = a.getJSONObject(it)
-            Note(o.getLong("id"), o.getString("folder"), o.getString("title"), o.getString("body"))
+            Note(o.getLong("id"), visibleNoteFolder(o.getString("folder")), o.getString("title"), o.getString("body"))
         }
     }
 
@@ -39,5 +41,5 @@ class Store(ctx: Context) {
         p.edit().putString("tasks", a.toString()).apply()
     }
 
-    companion object { val FOLDERS = listOf("Personal", "Work", "Ideas", "Journals") }
+    companion object { val FOLDERS = listOf("Personal", "Work", "Ideas") }
 }

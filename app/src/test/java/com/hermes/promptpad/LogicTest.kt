@@ -1,6 +1,8 @@
 package com.hermes.promptpad
 
+import androidx.compose.ui.text.TextRange
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -14,6 +16,25 @@ class LogicTest {
     @Test fun appSpecPreservesProfileIdentity() {
         val app = AppEntry("Mail", "mail.pkg", "mail.Activity", 12, null)
         assertEquals("mail.pkg\tmail.Activity\t12", app.spec)
+    }
+
+    @Test fun initialSearchCursorFollowsForwardedKey() {
+        val value = initialSearchValue("p")
+        assertEquals("p", value.text)
+        assertEquals(TextRange(1), value.selection)
+    }
+
+    @Test fun notesDoNotOfferJournalsFolder() {
+        assertFalse(Store.FOLDERS.contains("Journals"))
+        assertEquals("Personal", visibleNoteFolder("Journals"))
+    }
+
+    @Test fun katapultIconMappingCoversKnownApps() {
+        assertEquals(R.drawable.whatsapp, Apps.bundledIconForPackage("com.whatsapp"))
+        assertEquals(R.drawable.phone, Apps.bundledIconForPackage("com.android.dialer"))
+        assertEquals(R.drawable.google, Apps.bundledIconForPackage("com.android.vending"))
+        assertEquals(R.drawable.money, Apps.bundledIconForPackage("com.paypal.android.p2pmobile"))
+        assertEquals(R.drawable.keyboard, Apps.bundledIconForPackage("it.palsoftware.pastiera"))
     }
 
     @Test fun inlineMarkersRenderAsSpans() {

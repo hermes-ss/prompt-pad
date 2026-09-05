@@ -14,23 +14,79 @@ data class AppEntry(
     val activity: String,
     val userSerial: Long,
     val icon: Drawable?,
+    val bundledIconRes: Int? = null,
 ) {
     val spec: String get() = listOf(pkg, activity, userSerial.toString()).joinToString("\t")
 }
 
 object Apps {
+    private val KATAPULT_ICONS = mapOf(
+        "org.thoughtcrime.securesms" to R.drawable.signal,
+        "org.telegram.messenger" to R.drawable.telegram,
+        "com.viber.voip" to R.drawable.viber,
+        "com.whatsapp" to R.drawable.whatsapp,
+        "com.beeper.android" to R.drawable.beeper,
+        "com.aurora.store" to R.drawable.aurora,
+        "org.fdroid.fdroid" to R.drawable.f_droid,
+        "com.spotify.music" to R.drawable.spotify,
+        "com.android.gallery3d" to R.drawable.gallery,
+        "com.google.android.apps.photos" to R.drawable.gallery,
+        "com.android.deskclock" to R.drawable.clock,
+        "com.google.android.deskclock" to R.drawable.clock,
+        "com.android.fmradio" to R.drawable.radio,
+        "com.android.stk" to R.drawable.sim,
+        "org.mozilla.firefox" to R.drawable.firefox,
+        "org.mozilla.firefox_beta" to R.drawable.firefox,
+        "org.mozilla.focus" to R.drawable.firefox,
+        "com.fsck.k9" to R.drawable.mail,
+        "net.thunderbird.android" to R.drawable.mail,
+        "com.android.documentsui" to R.drawable.files,
+        "de.danoeh.antennapod" to R.drawable.ap,
+        "dev.octoshrimpy.quik" to R.drawable.sms,
+        "com.message.ink" to R.drawable.sms,
+        "com.discord" to R.drawable.discord,
+        "fm.libro.librofm" to R.drawable.librofm,
+        "org.schabi.newpipe" to R.drawable.newpipe,
+        "org.fossify.musicplayer" to R.drawable.music,
+        "org.oxycblt.auxio" to R.drawable.music,
+        "com.foobar2000.foobar2000" to R.drawable.music,
+        "org.videolan.vlc" to R.drawable.music,
+        "com.android.settings" to R.drawable.settings,
+        "com.android.vending" to R.drawable.google,
+        "com.paypal.android.p2pmobile" to R.drawable.money,
+        "it.palsoftware.pastiera" to R.drawable.keyboard,
+        "it.palsoftware.pastiera.nightly" to R.drawable.keyboard,
+        "org.chromium.webview_shell" to R.drawable.chromium,
+        "com.brave.browser" to R.drawable.brave,
+        "com.zsemberi.killapps" to R.drawable.killapps,
+        "org.koreader.launcher" to R.drawable.koreader,
+        "org.koreader.launcher.fdroid" to R.drawable.koreader,
+        "com.reddit.frontpage" to R.drawable.reddit,
+        "info.plateaukao.einkbro" to R.drawable.einkbro,
+        "ws.xsoh.etar" to R.drawable.calendar,
+        "org.onekash.kashcal" to R.drawable.calendar,
+        "com.android.dialer" to R.drawable.phone,
+        "com.google.android.dialer" to R.drawable.phone,
+        "com.android.camera2" to R.drawable.camera,
+        "com.google.android.GoogleCamera" to R.drawable.camera,
+    )
+
+    fun bundledIconForPackage(packageName: String): Int? = KATAPULT_ICONS[packageName]
+
     fun all(ctx: Context): List<AppEntry> {
         val launcher = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val users = ctx.getSystemService(Context.USER_SERVICE) as UserManager
         return launcher.profiles.flatMap { user ->
             val serial = users.getSerialNumberForUser(user)
             launcher.getActivityList(null, user).map { info ->
+                val packageName = info.componentName.packageName
                 AppEntry(
                     info.label.toString(),
-                    info.componentName.packageName,
+                    packageName,
                     info.componentName.className,
                     serial,
                     runCatching { info.getBadgedIcon(0) }.getOrNull(),
+                    bundledIconForPackage(packageName).takeIf { user == Process.myUserHandle() },
                 )
             }
         }.distinctBy { Triple(it.pkg, it.activity, it.userSerial) }

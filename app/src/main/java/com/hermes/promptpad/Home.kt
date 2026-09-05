@@ -2,7 +2,6 @@ package com.hermes.promptpad
 
 import android.content.Context
 import android.os.BatteryManager
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,15 +22,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -62,10 +63,18 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
                     onDoubleTap = { if (prefs.tapToSleep) TapToSleepAccessibilityService.lockScreen() },
                 )
             }
-            .safeDrawingPadding().padding(horizontal = 14.dp),
+            .then(
+                if (prefs.peakRight) {
+                    Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                    )
+                } else {
+                    Modifier.safeDrawingPadding()
+                }
+            ).padding(horizontal = 14.dp),
     ) {
         Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(14.dp))
+            if (!prefs.peakRight) Spacer(Modifier.height(14.dp))
             PeakWidget(prefs, tick)
             Spacer(Modifier.height(16.dp))
             GlanceRows(nav, tick)
@@ -102,9 +111,21 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     }
     val alignment = if (prefs.peakRight) Alignment.End else Alignment.Start
-    Column(Modifier.fillMaxWidth().padding(start = Dim2.cutoutLeft), horizontalAlignment = alignment) {
+    Column(
+        Modifier.fillMaxWidth().padding(start = if (prefs.peakRight) 0.dp else Dim2.cutoutLeft),
+        horizontalAlignment = alignment,
+    ) {
         when (prefs.peakVariant) {
-            1 -> Text("${format("EEEE")}, ${format("MMMM d")}  ·  ${format("HH:mm")}", style = MaterialTheme.typography.headlineSmall)
+            1 -> {
+                val date = "${format("EEEE")}, ${format("MMMM d")}  ·  "
+                Text(
+                    buildAnnotatedString {
+                        append(date)
+                        withStyle(SpanStyle(color = Accent)) { append(format("HH:mm")) }
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+            }
             2 -> {
                 Text(format("HH:mm"), style = MaterialTheme.typography.headlineSmall, color = Accent)
                 Text("${format("EEEE")}, ${format("MMMM d")}", style = MaterialTheme.typography.bodyMedium, color = Dim)
@@ -154,7 +175,7 @@ fun GlanceRows(nav: (Screen) -> Unit, tick: Int) {
 @Composable
 private fun GlanceRow(icon: ImageVector, text: String, badge: Int?, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(9.dp))
+        Modifier.fillMaxWidth().height(57.dp).clip(RoundedCornerShape(9.dp))
             .background(Black).border(1.dp, White, RoundedCornerShape(9.dp))
             .clickable { onClick() }.padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -180,6 +201,13 @@ private val NATIVE = mapOf(
     "promptpad:settings" to Native(Screen.Settings, "Settings", Icons.Outlined.Tune),
 )
 
+// Note and To Do deliberately keep their PromptPad icons.
+private val NATIVE_KATAPULT_ICONS = mapOf(
+    "promptpad:agenda" to R.drawable.calendar,
+    "promptpad:hub" to R.drawable.home,
+    "promptpad:settings" to R.drawable.settings,
+)
+
 val DEFAULT_TILES = listOf("promptpad:notes", "promptpad:agenda", "promptpad:clock", "promptpad:todo")
 
 private val SYSTEM = mapOf(
@@ -187,6 +215,13 @@ private val SYSTEM = mapOf(
     "promptpad:phone" to Triple("Call", Icons.Outlined.Call, "android.intent.action.DIAL"),
     "promptpad:sms" to Triple("Message", Icons.Outlined.ChatBubbleOutline, "android.intent.action.MAIN|android.intent.category.APP_MESSAGING"),
     "promptpad:camera" to Triple("Camera", Icons.Outlined.PhotoCamera, "android.media.action.STILL_IMAGE_CAMERA"),
+)
+
+private val SYSTEM_KATAPULT_ICONS = mapOf(
+    "promptpad:clock" to R.drawable.clock,
+    "promptpad:phone" to R.drawable.phone,
+    "promptpad:sms" to R.drawable.sms,
+    "promptpad:camera" to R.drawable.camera,
 )
 
 @Composable
@@ -201,6 +236,7 @@ fun AppGrid(prefs: Prefs, editing: Boolean, nav: (Screen) -> Unit, onEdit: (Int)
             Shortcut(
                 label = native?.label ?: system?.first ?: app?.label ?: Apps.label(ctx, key),
                 icon = native?.icon ?: system?.second,
+                iconRes = NATIVE_KATAPULT_ICONS[key] ?: SYSTEM_KATAPULT_ICONS[key],
                 app = app,
                 editing = editing,
                 modifier = Modifier.weight(1f),
@@ -221,6 +257,7 @@ fun AppGrid(prefs: Prefs, editing: Boolean, nav: (Screen) -> Unit, onEdit: (Int)
 private fun Shortcut(
     label: String,
     icon: ImageVector?,
+    iconRes: Int?,
     app: AppEntry?,
     editing: Boolean,
     modifier: Modifier,
@@ -232,9 +269,10 @@ private fun Shortcut(
                 .border(2.dp, if (editing) Accent else White, RoundedCornerShape(19.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            if (app?.icon != null) {
-                val image = remember(app.spec) { app.icon.toBitmap(60, 60).asImageBitmap() }
-                Image(image, null, Modifier.fillMaxSize().clip(RoundedCornerShape(19.dp)))
+            if (app != null && (app.icon != null || app.bundledIconRes != null)) {
+                AppIcon(app.icon, app.bundledIconRes, size = 60)
+            } else if (iconRes != null) {
+                Icon(painterResource(iconRes), null, Modifier.size(28.dp), tint = White)
             } else if (icon != null) {
                 Icon(icon, null, Modifier.size(28.dp), tint = White)
             }
@@ -258,7 +296,7 @@ fun AppPicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
                 }
                 items(apps, key = { it.spec }) { app ->
                     Row48({ onPick(app.spec) }) {
-                        AppIcon(app.icon)
+                        AppIcon(app.icon, app.bundledIconRes)
                         Spacer(Modifier.width(12.dp))
                         Text(app.label, style = MaterialTheme.typography.bodyMedium)
                     }

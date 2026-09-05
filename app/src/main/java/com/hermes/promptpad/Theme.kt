@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -27,8 +28,8 @@ private val LatoFamily = FontFamily(
 )
 
 @Composable
-fun MinimalTheme(prefs: Prefs, content: @Composable () -> Unit) {
-    val scale = prefs.textScale / 100f
+fun MinimalTheme(prefs: Prefs, revision: Int = 0, content: @Composable () -> Unit) {
+    val scale = remember(revision) { prefs.textScale / 100f }
     fun style(size: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
         fontFamily = LatoFamily,
         fontSize = (size * scale).sp,

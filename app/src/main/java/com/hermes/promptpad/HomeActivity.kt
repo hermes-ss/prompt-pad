@@ -35,7 +35,8 @@ class HomeActivity : ComponentActivity() {
         applyStatusBar()
 
         setContent {
-            MinimalTheme(prefs) {
+            var preferenceVersion by remember { mutableIntStateOf(0) }
+            MinimalTheme(prefs, preferenceVersion) {
                 var tick by remember { mutableIntStateOf(0) }
                 LaunchedEffect(Unit) { while (true) { delay(20_000); tick++ } }
                 val back = { screen = Screen.Home }
@@ -43,7 +44,12 @@ class HomeActivity : ComponentActivity() {
                     Screen.Home -> HomeScreen(prefs, { screen = it }, tick)
                     Screen.Drawer -> DrawerScreen(prefs, pendingKey.orEmpty()) { pendingKey = null; back() }
                     Screen.Hub -> HubScreen(back)
-                    Screen.Settings -> SettingsScreen(prefs, back, ::openAccessibility, ::applyStatusBar)
+                    Screen.Settings -> SettingsScreen(
+                        prefs,
+                        back,
+                        ::openAccessibility,
+                        ::applyStatusBar,
+                    ) { preferenceVersion++ }
                     Screen.Notes -> NotesScreen(back)
                     Screen.Todo -> TodoScreen(back)
                     Screen.Agenda -> AgendaScreen(back) { calendarPermission.launch(Manifest.permission.READ_CALENDAR) }

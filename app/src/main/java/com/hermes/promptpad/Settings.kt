@@ -16,9 +16,10 @@ fun SettingsScreen(
     back: () -> Unit,
     openAccessibility: () -> Unit,
     applyStatusBar: () -> Unit,
+    onPreferencesChanged: () -> Unit,
 ) {
     var version by remember { mutableIntStateOf(0) }
-    fun update(block: () -> Unit) { block(); version++ }
+    fun update(block: () -> Unit) { block(); version++; onPreferencesChanged() }
 
     Column(
         Modifier.fillMaxSize().background(Black).safeDrawingPadding()

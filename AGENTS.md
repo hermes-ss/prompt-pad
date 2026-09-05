@@ -12,7 +12,10 @@ Package `com.hermes.promptpad`. Kotlin + Compose, single activity, ~1.4k LOC, ze
 - Test AVD `promptpad43` = 1080x1440 (4:3), android-35 google_apis x86_64, hw keyboard on.
 
 ## Layout contract
-Two-line lowercase date -> weather/battery caption -> two bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette.
+Two-line lowercase date -> weather/battery caption -> two 57dp bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette. The in-app clock is always orange. Right-aligned Peak variants intentionally start at the physical top edge because the device cutout is on the left; left-aligned variants retain safe top inset and spacing.
+
+## Icon contract
+Use the bundled Katapult monochrome icon set for mapped apps and system shortcuts. Note and To Do intentionally retain their PromptPad Material icons. Owner-profile apps may use bundled artwork; managed-profile apps keep Android's badged launcher icon so work-profile identity is not lost. Drawer icons use one fixed outer size.
 
 ## Gestures
 Swipe up = profile-aware drawer (personal + managed work apps, badged icons, auto-focused bottom search). Swipe right = Hub. Swipe left = Settings. Long-press blank Home area = shortcut edit mode. Double-tap blank Home area = sleep when enabled. Hidden status bar is transiently revealed by a top-edge swipe. Physical key long-press on Home = mapped app launch.
