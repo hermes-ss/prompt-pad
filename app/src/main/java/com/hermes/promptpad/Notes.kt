@@ -1,11 +1,16 @@
 package com.hermes.promptpad
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,11 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -74,11 +81,18 @@ fun NotesScreen(back: () -> Unit) {
  */
 @Composable
 fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () -> Unit) {
+    val ctx = LocalContext.current
     var title by remember(note.id) { mutableStateOf(note.title) }
-    var body by remember(note.id) { mutableStateOf(note.body) }
+    var body by remember(note.id) { mutableStateOf(TextFieldValue(note.body, TextRange(note.body.length))) }
     var preview by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
 
-    fun wrap(marker: String) { body += marker; note.body = body; onChange() }
+    fun update(value: TextFieldValue) { body = value; note.body = value.text; onChange() }
+    fun append(marker: String) = update(TextFieldValue(body.text + marker, TextRange(body.text.length + marker.length)))
+    fun share() = ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, noteShareText(note))
+    }, "Sharing text"))
 
     Column(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal = Dim2.screen)) {
         Header("note", center = true)
@@ -87,30 +101,47 @@ fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () 
             textStyle = MaterialTheme.typography.titleMedium,
             colors = noteFieldColors())
         if (preview) {
-            Column(Modifier.weight(1f).padding(top = 8.dp)) {
-                body.lines().forEach { line -> RichLine(line) { done ->
-                    body = body.lines().joinToString("\n") { if (it == line) toggleCheck(it, done) else it }
-                    note.body = body; onChange()
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
+                body.text.lines().forEach { line -> RichLine(line) { done ->
+                    update(TextFieldValue(body.text.lines().joinToString("\n") { if (it == line) toggleCheck(it, done) else it }))
                 } }
             }
         } else {
-            TextField(body, { body = it; note.body = it; onChange() },
+            TextField(body, ::update,
                 Modifier.fillMaxWidth().weight(1f), textStyle = MaterialTheme.typography.bodyMedium,
                 placeholder = { Text("write…", color = DotIdle) }, colors = noteFieldColors())
         }
         Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("H" to "\n# ", "B" to "**b**", "I" to "_i_", "U" to "__u__", "•" to "\n- ", "☐" to "\n[] ").forEach { (l, m) ->
-                Text(l, Modifier.clickable { wrap(m) }.padding(8.dp),
+            listOf("H" to "\n# ", "B" to "**b**", "I" to "_i_", "U" to "__u__").forEach { (l, m) ->
+                Text(l, Modifier.clickable { append(m) }.padding(8.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White)
+            }
+            listOf("•" to "-", "☐" to "[]").forEach { (label, marker) ->
+                Text(label, Modifier.clickable { update(insertListMarker(body, marker)) }.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White)
             }
             Text(if (preview) "edit" else "view", Modifier.clickable { preview = !preview }.padding(8.dp),
                 style = MaterialTheme.typography.bodySmall, color = Accent)
-            Text("delete", Modifier.clickable { onDelete() }.padding(8.dp),
-                style = MaterialTheme.typography.bodySmall, color = Accent)
+            Box {
+                Text("more", Modifier.clickable { menu = true }.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall, color = Accent)
+                DropdownMenu(menu, { menu = false }) {
+                    DropdownMenuItem({ Text("share") }, { menu = false; share() })
+                    DropdownMenuItem({ Text("delete") }, { menu = false; onDelete() })
+                }
+            }
         }
     }
 }
+
+fun insertListMarker(value: TextFieldValue, marker: String): TextFieldValue {
+    val inserted = "\n$marker "
+    val text = value.text.replaceRange(value.selection.min, value.selection.max, inserted)
+    return TextFieldValue(text, TextRange(value.selection.min + inserted.length))
+}
+
+fun noteShareText(note: Note) = listOf(note.title, note.body).filter(String::isNotBlank).joinToString("\n\n")
 
 private fun toggleCheck(line: String, done: Boolean) = when {
     done -> line.replaceFirst("[] ", "[x] ")

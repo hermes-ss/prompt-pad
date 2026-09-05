@@ -43,4 +43,21 @@ class LogicTest {
         assertTrue(text.spanStyles.any { it.item.fontWeight == androidx.compose.ui.text.font.FontWeight.Bold })
         assertTrue(text.spanStyles.any { it.item.fontStyle == androidx.compose.ui.text.font.FontStyle.Italic })
     }
+
+    @Test fun listMarkerIsInsertedAtCursorOnANewLine() {
+        val result = insertListMarker(androidx.compose.ui.text.input.TextFieldValue("beforeafter", TextRange(6)), "-")
+        assertEquals("before\n- after", result.text)
+        assertEquals(TextRange(9), result.selection)
+    }
+
+    @Test fun listMarkerReplacesSelectionAndLeavesCursorAfterMarker() {
+        val result = insertListMarker(androidx.compose.ui.text.input.TextFieldValue("beforeafter", TextRange(6, 11)), "[]")
+        assertEquals("before\n[] ", result.text)
+        assertEquals(TextRange(10), result.selection)
+    }
+
+    @Test fun noteShareTextIncludesTitleWhenPresent() {
+        assertEquals("Title\n\nBody", noteShareText(Note(1, "Personal", "Title", "Body")))
+        assertEquals("Body", noteShareText(Note(1, "Personal", "", "Body")))
+    }
 }
