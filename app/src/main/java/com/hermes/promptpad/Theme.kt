@@ -43,6 +43,7 @@ fun MinimalTheme(prefs: Prefs, revision: Int = 0, content: @Composable () -> Uni
             secondary = Accent, error = DotBad,
         ),
         typography = Typography(
+            headlineMedium = style(26, FontWeight.Bold),
             headlineSmall = style(20, FontWeight.Bold),
             titleMedium = style(15, FontWeight.Bold),
             bodyMedium = style(13),

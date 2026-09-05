@@ -75,14 +75,14 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
     ) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(if (prefs.peakRight) 8.dp else 14.dp))
-            PeakWidget(prefs, tick)
+            PeakWidget(prefs, tick, nav, editing) { picking = 4 }
             Spacer(Modifier.height(16.dp))
-            GlanceRows(nav, tick)
+            GlanceRows(nav, tick, prefs.textScale)
             Spacer(Modifier.weight(1f))
             AppGrid(prefs, editing, nav) { picking = it }
             if (editing) {
                 Text(
-                    "edit mode · tap an icon to replace · long-press to exit",
+                    "edit mode · tap date or icon to replace · long-press to exit",
                     Modifier.fillMaxWidth().padding(top = 6.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = Accent,
@@ -95,18 +95,31 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
 
     if (picking >= 0) {
         AppPicker(
-            onPick = { spec -> prefs.setTile(picking, spec, DEFAULT_TILES); picking = -1; editing = false },
+            onPick = { spec ->
+                if (picking == 4) prefs.peakApp = spec else prefs.setTile(picking, spec, DEFAULT_TILES)
+                picking = -1; editing = false
+            },
             onDismiss = { picking = -1 },
         )
     }
 }
 
 @Composable
-fun PeakWidget(prefs: Prefs, tick: Int) {
+fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean, onEdit: () -> Unit) {
     val ctx = LocalContext.current
     val now = remember(tick) { Date() }
     fun format(pattern: String) = SimpleDateFormat(pattern, Locale.getDefault()).format(now).lowercase()
-    fun openCalendar() = Apps.launchAction(ctx, "android.intent.action.MAIN|android.intent.category.APP_CALENDAR")
+    fun openDate() {
+        val key = prefs.peakApp
+        val native = NATIVE[key]
+        val system = SYSTEM[key]
+        when {
+            editing -> onEdit()
+            native != null -> nav(native.screen)
+            system != null -> Apps.launchAction(ctx, system.third)
+            else -> Apps.launch(ctx, key)
+        }
+    }
     fun openClock() = Apps.launchAction(ctx, "android.intent.action.SHOW_ALARMS")
     val battery = remember(tick) {
         (ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
@@ -121,17 +134,17 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
             1 -> {
                 val date = "${format("EEEE")}, ${format("MMMM d")}  ·  "
                 Row {
-                    Text(date, Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
+                    Text(date, Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
                     Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
                 }
             }
             2 -> {
                 Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
-                Text("${format("EEEE")}, ${format("MMMM d")}", Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.bodyMedium, color = Dim)
+                Text("${format("EEEE")}, ${format("MMMM d")}", Modifier.clickable { openDate() }, style = MaterialTheme.typography.bodyMedium, color = Dim)
             }
             else -> {
-                Text("${format("EEEE")},", Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
-                Text(format("MMMM d"), Modifier.clickable { openCalendar() }, style = MaterialTheme.typography.headlineSmall)
+                Text("${format("EEEE")},", Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
+                Text(format("MMMM d"), Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -153,7 +166,7 @@ fun PeakWidget(prefs: Prefs, tick: Int) {
 }
 
 @Composable
-fun GlanceRows(nav: (Screen) -> Unit, tick: Int) {
+fun GlanceRows(nav: (Screen) -> Unit, tick: Int, textScale: Int) {
     val ctx = LocalContext.current
     val event = remember(tick) { runCatching { Agenda.upcoming(ctx, 2).firstOrNull() }.getOrNull() }
     val open = remember(tick) { Store(ctx).tasks().filter { !it.done } }
@@ -162,17 +175,19 @@ fun GlanceRows(nav: (Screen) -> Unit, tick: Int) {
             Icons.Outlined.CalendarToday,
             event?.let { "${it.title.lowercase()} · ${Agenda.when_(it).substringAfter("· ")}" } ?: "no events today",
             null,
+            textScale = textScale,
         ) { nav(Screen.Agenda) }
         GlanceRow(
             Icons.Outlined.FormatListBulleted,
             open.firstOrNull()?.text ?: "no open tasks",
             if (open.size > 1) open.size else null,
+            textScale = textScale,
         ) { nav(Screen.Todo) }
     }
 }
 
 @Composable
-private fun GlanceRow(icon: ImageVector, text: String, badge: Int?, onClick: () -> Unit) {
+private fun GlanceRow(icon: ImageVector, text: String, badge: Int?, textScale: Int, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().height(57.dp).clip(RoundedCornerShape(9.dp))
             .background(Black).border(1.dp, White, RoundedCornerShape(9.dp))
@@ -183,7 +198,8 @@ private fun GlanceRow(icon: ImageVector, text: String, badge: Int?, onClick: () 
         Spacer(Modifier.width(10.dp))
         Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (badge != null) {
-            Box(Modifier.size(19.dp).clip(CircleShape).background(Accent), contentAlignment = Alignment.Center) {
+            val badgeSize = (19 * textScale / 100f).dp
+            Box(Modifier.size(badgeSize).clip(CircleShape).background(Accent), contentAlignment = Alignment.Center) {
                 Text("$badge", style = MaterialTheme.typography.labelSmall, color = Black)
             }
         }
@@ -210,6 +226,7 @@ private val NATIVE_KATAPULT_ICONS = mapOf(
 val DEFAULT_TILES = listOf("promptpad:notes", "promptpad:agenda", "promptpad:clock", "promptpad:todo")
 
 private val SYSTEM = mapOf(
+    "promptpad:calendar" to Triple("Calendar", Icons.Outlined.CalendarToday, "android.intent.action.MAIN|android.intent.category.APP_CALENDAR"),
     "promptpad:clock" to Triple("Clock", Icons.Outlined.Timer, "android.intent.action.SHOW_ALARMS"),
     "promptpad:phone" to Triple("Call", Icons.Outlined.Call, "android.intent.action.DIAL"),
     "promptpad:sms" to Triple("Message", Icons.Outlined.ChatBubbleOutline, "android.intent.action.MAIN|android.intent.category.APP_MESSAGING"),
@@ -217,6 +234,7 @@ private val SYSTEM = mapOf(
 )
 
 private val SYSTEM_KATAPULT_ICONS = mapOf(
+    "promptpad:calendar" to R.drawable.calendar,
     "promptpad:clock" to R.drawable.clock,
     "promptpad:phone" to R.drawable.phone,
     "promptpad:sms" to R.drawable.sms,

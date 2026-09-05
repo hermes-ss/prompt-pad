@@ -7,10 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LogicTest {
-    @Test fun searchPrefersPrefixMatches() {
+    @Test fun drawerStaysEmptyUntilSearched() {
         val apps = listOf("Telegram", "Settings", "Tetris").map { AppEntry(it, it, it, 0, null) }
         assertEquals(listOf("Telegram", "Tetris"), Apps.search(apps, "te").map { it.label })
-        assertEquals(3, Apps.search(apps, "").size)
+        assertTrue(Apps.search(apps, "").isEmpty())
     }
 
     @Test fun appSpecPreservesProfileIdentity() {
@@ -31,10 +31,17 @@ class LogicTest {
 
     @Test fun katapultIconMappingCoversKnownApps() {
         assertEquals(R.drawable.whatsapp, Apps.bundledIconForPackage("com.whatsapp"))
+        assertEquals(R.drawable.mail, Apps.bundledIconForPackage("com.google.android.gm"))
         assertEquals(R.drawable.phone, Apps.bundledIconForPackage("com.android.dialer"))
         assertEquals(R.drawable.google, Apps.bundledIconForPackage("com.android.vending"))
         assertEquals(R.drawable.money, Apps.bundledIconForPackage("com.paypal.android.p2pmobile"))
         assertEquals(R.drawable.keyboard, Apps.bundledIconForPackage("it.palsoftware.pastiera"))
+    }
+
+    @Test fun completedTodosAreRetainedUntilCleared() {
+        val tasks = listOf(Task(1, "one", false), Task(2, "two", true))
+        assertEquals(listOf(false, false), toggleTask(tasks, 2).map { it.done })
+        assertEquals(listOf(1L), clearDone(tasks).map { it.id })
     }
 
     @Test fun inlineMarkersRenderAsSpans() {

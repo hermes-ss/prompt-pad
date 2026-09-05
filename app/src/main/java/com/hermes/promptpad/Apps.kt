@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Process
 import android.os.UserManager
@@ -40,6 +41,7 @@ object Apps {
         "org.mozilla.focus" to R.drawable.firefox,
         "com.fsck.k9" to R.drawable.mail,
         "net.thunderbird.android" to R.drawable.mail,
+        "com.google.android.gm" to R.drawable.mail,
         "com.android.documentsui" to R.drawable.files,
         "de.danoeh.antennapod" to R.drawable.ap,
         "dev.octoshrimpy.quik" to R.drawable.sms,
@@ -80,13 +82,18 @@ object Apps {
             val serial = users.getSerialNumberForUser(user)
             launcher.getActivityList(null, user).map { info ->
                 val packageName = info.componentName.packageName
+                val bundled = bundledIconForPackage(packageName)
+                val managedIcon = if (user != Process.myUserHandle() && bundled != null) runCatching {
+                    ctx.getDrawable(bundled)!!.mutate().apply { setTint(Color.WHITE) }
+                        .let { ctx.packageManager.getUserBadgedIcon(it, user) }
+                }.getOrNull() else null
                 AppEntry(
                     info.label.toString(),
                     packageName,
                     info.componentName.className,
                     serial,
-                    runCatching { info.getBadgedIcon(0) }.getOrNull(),
-                    bundledIconForPackage(packageName).takeIf { user == Process.myUserHandle() },
+                    managedIcon ?: runCatching { info.getBadgedIcon(0) }.getOrNull(),
+                    bundled.takeIf { user == Process.myUserHandle() },
                 )
             }
         }.distinctBy { Triple(it.pkg, it.activity, it.userSerial) }
@@ -130,7 +137,7 @@ object Apps {
     }
 
     fun search(list: List<AppEntry>, query: String): List<AppEntry> {
-        if (query.isBlank()) return list
+        if (query.isBlank()) return emptyList()
         val q = query.lowercase()
         val prefix = list.filter { it.label.lowercase().startsWith(q) }
         return prefix + list.filter { !it.label.lowercase().startsWith(q) && it.label.lowercase().contains(q) }

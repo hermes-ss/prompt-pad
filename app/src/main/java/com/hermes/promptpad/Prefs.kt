@@ -16,6 +16,9 @@ class Prefs(ctx: Context) {
     var textScale: Int by IntPref(p, "textScale", 100)
     var tapToSleep: Boolean by BoolPref(p, "tapToSleep", false)
     var hideStatusBar: Boolean by BoolPref(p, "hideStatusBar", false)
+    var peakApp: String
+        get() = p.getString("peakApp", "promptpad:calendar")!!
+        set(value) = p.edit().putString("peakApp", value).apply()
 
     var tiles: List<String>
         get() = p.getString("tiles", "")!!.split(",").filter { it.isNotBlank() }.take(4)

@@ -55,7 +55,7 @@ fun NotesScreen(back: () -> Unit) {
         return
     }
 
-    Column(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal = Dim2.screen)) {
+    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
         Header("notes", center = true)
         Tabs(Store.FOLDERS, folder) { folder = it }
         Spacer(Modifier.height(Dim2.gap))
@@ -94,7 +94,7 @@ fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () 
         putExtra(Intent.EXTRA_TEXT, noteShareText(note))
     }, "Sharing text"))
 
-    Column(Modifier.fillMaxSize().background(Black).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)).padding(horizontal = Dim2.screen)) {
+    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
         Header("note", center = true)
         TextField(title, { title = it; note.title = it; onChange() }, Modifier.fillMaxWidth(),
             placeholder = { Text("title", color = DotIdle) }, singleLine = true,
