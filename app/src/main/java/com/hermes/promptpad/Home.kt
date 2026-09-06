@@ -121,6 +121,10 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
         }
     }
     fun openClock() = Apps.launchAction(ctx, "android.intent.action.SHOW_ALARMS")
+    val dateShape = RoundedCornerShape(8.dp)
+    val dateModifier = Modifier
+        .then(if (editing) Modifier.border(2.dp, Accent, dateShape).padding(horizontal = 6.dp, vertical = 2.dp) else Modifier)
+        .clickable { openDate() }
     val battery = remember(tick) {
         (ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
@@ -134,17 +138,19 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
             1 -> {
                 val date = "${format("EEEE")}, ${format("MMMM d")}  ·  "
                 Row {
-                    Text(date, Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
+                    Text(date, dateModifier, style = MaterialTheme.typography.headlineSmall)
                     Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
                 }
             }
             2 -> {
                 Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
-                Text("${format("EEEE")}, ${format("MMMM d")}", Modifier.clickable { openDate() }, style = MaterialTheme.typography.bodyMedium, color = Dim)
+                Text("${format("EEEE")}, ${format("MMMM d")}", dateModifier, style = MaterialTheme.typography.bodyMedium, color = Dim)
             }
             else -> {
-                Text("${format("EEEE")},", Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
-                Text(format("MMMM d"), Modifier.clickable { openDate() }, style = MaterialTheme.typography.headlineSmall)
+                Column(dateModifier) {
+                    Text("${format("EEEE")},", style = MaterialTheme.typography.headlineSmall)
+                    Text(format("MMMM d"), style = MaterialTheme.typography.headlineSmall)
+                }
             }
         }
         Spacer(Modifier.height(6.dp))

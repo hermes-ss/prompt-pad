@@ -4,10 +4,23 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Process
+import android.os.UserHandle
 import android.os.UserManager
+import kotlin.math.roundToInt
+
+data class IconSize(val width: Int, val height: Int)
+
+fun fitBundledIcon(width: Int, height: Int, container: Int): IconSize {
+    val target = (container * 0.64f).roundToInt()
+    val scale = target.toFloat() / maxOf(width, height)
+    return IconSize((width * scale).roundToInt(), (height * scale).roundToInt())
+}
 
 data class AppEntry(
     val label: String,
@@ -83,10 +96,9 @@ object Apps {
             launcher.getActivityList(null, user).map { info ->
                 val packageName = info.componentName.packageName
                 val bundled = bundledIconForPackage(packageName)
-                val managedIcon = if (user != Process.myUserHandle() && bundled != null) runCatching {
-                    ctx.getDrawable(bundled)!!.mutate().apply { setTint(Color.WHITE) }
-                        .let { ctx.packageManager.getUserBadgedIcon(it, user) }
-                }.getOrNull() else null
+                val managedIcon = if (user != Process.myUserHandle() && bundled != null) {
+                    managedBundledIcon(ctx, bundled, user)
+                } else null
                 AppEntry(
                     info.label.toString(),
                     packageName,
@@ -99,6 +111,20 @@ object Apps {
         }.distinctBy { Triple(it.pkg, it.activity, it.userSerial) }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
     }
+
+    private fun managedBundledIcon(ctx: Context, iconRes: Int, user: UserHandle): Drawable? = runCatching {
+        val px = (44 * ctx.resources.displayMetrics.density).roundToInt()
+        val icon = ctx.getDrawable(iconRes)!!.mutate().apply { setTint(Color.WHITE) }
+        val fitted = fitBundledIcon(icon.intrinsicWidth, icon.intrinsicHeight, px)
+        val left = (px - fitted.width) / 2
+        val top = (px - fitted.height) / 2
+        val bitmap = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888).apply {
+            density = ctx.resources.displayMetrics.densityDpi
+        }
+        icon.setBounds(left, top, left + fitted.width, top + fitted.height)
+        icon.draw(Canvas(bitmap))
+        ctx.packageManager.getUserBadgedIcon(BitmapDrawable(ctx.resources, bitmap), user)
+    }.getOrNull()
 
     fun fromSpec(ctx: Context, spec: String): AppEntry? {
         val parts = spec.split('\t')

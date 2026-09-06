@@ -39,10 +39,11 @@ class HubListener : NotificationListenerService() {
     private fun add(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
         val n = sbn.notification
+        items.removeAll { it.key == sbn.key }
+        if (!shouldInclude(n.flags)) return
         val x = n.extras
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: return
         val text = x.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        items.removeAll { it.key == sbn.key }
         items.add(0, HubItem(sbn.key, sbn.packageName, title, text, sbn.postTime, kindOf(sbn.packageName, n), replyOf(n)))
     }
 
@@ -52,6 +53,8 @@ class HubListener : NotificationListenerService() {
         fun isEnabled(ctx: Context): Boolean =
             (android.provider.Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners") ?: "")
                 .contains(ctx.packageName)
+
+        fun shouldInclude(flags: Int): Boolean = flags and Notification.FLAG_GROUP_SUMMARY == 0
 
         fun openSettings(ctx: Context) {
             ctx.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")

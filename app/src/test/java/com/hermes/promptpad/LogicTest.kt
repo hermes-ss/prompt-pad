@@ -1,5 +1,6 @@
 package com.hermes.promptpad
 
+import android.app.Notification
 import androidx.compose.ui.text.TextRange
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,6 +37,16 @@ class LogicTest {
         assertEquals(R.drawable.google, Apps.bundledIconForPackage("com.android.vending"))
         assertEquals(R.drawable.money, Apps.bundledIconForPackage("com.paypal.android.p2pmobile"))
         assertEquals(R.drawable.keyboard, Apps.bundledIconForPackage("it.palsoftware.pastiera"))
+    }
+
+    @Test fun workProfileBundledIconsKeepPersonalIconGeometry() {
+        assertEquals(IconSize(28, 21), fitBundledIcon(40, 30, 44))
+        assertEquals(IconSize(28, 28), fitBundledIcon(42, 42, 44))
+    }
+
+    @Test fun notificationGroupSummariesAreNotAddedToHub() {
+        assertFalse(HubListener.shouldInclude(Notification.FLAG_GROUP_SUMMARY))
+        assertTrue(HubListener.shouldInclude(0))
     }
 
     @Test fun completedTodosAreRetainedUntilCleared() {

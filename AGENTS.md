@@ -12,7 +12,7 @@ Package `com.hermes.promptpad`. Kotlin + Compose, single activity, ~1.4k LOC, ze
 - Test AVD `promptpad43` = 1080x1440 (4:3), android-35 google_apis x86_64, hw keyboard on.
 
 ## Layout contract
-Two-line lowercase date -> weather/battery caption -> two 57dp bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette. Peak date target and four shortcuts are app-picker configurable; clocks open the system Clock alarm view. Right-aligned Peak variants have an 8dp top gap so curved corners do not clip the clock; left-aligned variants retain safe top inset and 14dp spacing. Hub, Notes, Agenda and To Do use 26sp centered titles and safe-drawing top insets.
+Two-line lowercase date -> weather/battery caption -> two 57dp bordered glance rows -> four rounded bottom shortcuts. Katapult-derived Lato typography and black/white/orange (`#FC7703`) palette. Peak date target and four shortcuts are app-picker configurable and all gain orange borders in edit mode; clocks open the system Clock alarm view. Right-aligned Peak variants have an 8dp top gap so curved corners do not clip the clock; left-aligned variants retain safe top inset and 14dp spacing. Hub, Notes, Agenda and To Do use 26sp centered titles and safe-drawing top insets.
 
 ## Icon contract
 Use the bundled Katapult monochrome icon set for mapped apps and system shortcuts. Note and To Do intentionally retain their PromptPad Material icons. Managed-profile mapped apps use the same bundled artwork with Android's work badge. Drawer icons use one fixed outer size and remain hidden until search text is entered.
@@ -25,5 +25,6 @@ Activity tracking and Focus/Monk restriction modes are intentionally purged, inc
 
 ## Deliberate simplifications (ponytail)
 - No weather feed: device is offline, the widget shows `—°` behind a toggle.
+- Hub excludes notification group summaries so messaging apps contribute one actionable row.
 - Notes/To-Do persist as JSON in SharedPreferences; completed To-Dos stay struck through until Clear. Swap for Room only if lists get large.
 - Clock tile fires the system `SHOW_ALARMS` intent — spec says use the device clock app.
