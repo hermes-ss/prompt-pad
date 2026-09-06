@@ -9,7 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -49,7 +52,7 @@ fun AppIcon(icon: Drawable?, bundledIconRes: Int? = null, size: Int = 44) {
 fun initialSearchValue(query: String) = TextFieldValue(query, selection = TextRange(query.length))
 
 @Composable
-fun DrawerScreen(prefs: Prefs, initialQuery: String, back: () -> Unit) {
+fun DrawerScreen(prefs: Prefs, initialQuery: String, back: () -> Unit, openSettings: () -> Unit) {
     val ctx = LocalContext.current
     val apps = remember { Apps.all(ctx) }
     var query by remember { mutableStateOf(initialSearchValue(initialQuery)) }
@@ -67,21 +70,24 @@ fun DrawerScreen(prefs: Prefs, initialQuery: String, back: () -> Unit) {
                 }
             }
         }
-        TextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text("search apps", style = MaterialTheme.typography.bodyMedium, color = DotIdle) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().focusRequester(focus).padding(bottom = 6.dp),
-            textStyle = MaterialTheme.typography.bodyMedium,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = {
-                results.firstOrNull()?.let { Apps.launch(ctx, it); back() }
-            }),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Black, unfocusedContainerColor = Black,
-                cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = White,
-            ),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("search apps", style = MaterialTheme.typography.bodyMedium, color = DotIdle) },
+                singleLine = true,
+                modifier = Modifier.weight(1f).focusRequester(focus).padding(bottom = 6.dp),
+                textStyle = MaterialTheme.typography.bodyMedium,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = {
+                    results.firstOrNull()?.let { Apps.launch(ctx, it); back() }
+                }),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Black, unfocusedContainerColor = Black,
+                    cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = White,
+                ),
+            )
+            IconButton(openSettings) { Icon(Icons.Outlined.Settings, "Launcher settings", tint = Accent) }
+        }
     }
 }

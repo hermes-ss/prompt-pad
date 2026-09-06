@@ -49,6 +49,16 @@ class LogicTest {
         assertTrue(HubListener.shouldInclude(0))
     }
 
+    @Test fun hubHasNoAppsFilterAndUsesStarredLabel() {
+        assertEquals(listOf("All", "Messages", "Calls", "Emails", "Starred"), HUB_FILTERS)
+    }
+
+    @Test fun whatsappAndTelegramAreMessages() {
+        assertTrue(HubListener.isMessagingPackage("com.whatsapp"))
+        assertTrue(HubListener.isMessagingPackage("org.telegram.messenger"))
+        assertFalse(HubListener.isMessagingPackage("com.android.settings"))
+    }
+
     @Test fun completedTodosAreRetainedUntilCleared() {
         val tasks = listOf(Task(1, "one", false), Task(2, "two", true))
         assertEquals(listOf(false, false), toggleTask(tasks, 2).map { it.done })
@@ -72,6 +82,22 @@ class LogicTest {
         val result = insertListMarker(androidx.compose.ui.text.input.TextFieldValue("beforeafter", TextRange(6, 11)), "[]")
         assertEquals("before\n[] ", result.text)
         assertEquals(TextRange(10), result.selection)
+    }
+
+    @Test fun existingNoteOpensAtTheTop() {
+        assertEquals(TextRange.Zero, initialNoteBodyValue("first\nsecond").selection)
+    }
+
+    @Test fun weatherSymbolsAndRefreshRulesAreLocalAndDeterministic() {
+        assertEquals("🌙", weatherEmoji("clearsky_night"))
+        assertEquals("⛅", weatherEmoji("partlycloudy_day"))
+        assertEquals("🌧️", weatherEmoji("heavyrain"))
+        assertEquals("❄️", weatherEmoji("lightsnowshowers_day"))
+        assertEquals("⛅ 25°C", weatherText(24.6, "partlycloudy_day"))
+        assertFalse(weatherRefreshRequired(false, true, false, 0, 10))
+        assertTrue(weatherRefreshRequired(true, true, false, 0, 10))
+        assertFalse(weatherRefreshRequired(true, true, true, 20, 10))
+        assertTrue(weatherRefreshRequired(true, true, true, 10, 10))
     }
 
     @Test fun noteShareTextIncludesTitleWhenPresent() {

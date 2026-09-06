@@ -1,14 +1,19 @@
 package com.hermes.promptpad
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -19,6 +24,7 @@ fun SettingsScreen(
     onPreferencesChanged: () -> Unit,
 ) {
     var version by remember { mutableIntStateOf(0) }
+    val uriHandler = LocalUriHandler.current
     fun update(block: () -> Unit) { block(); version++; onPreferencesChanged() }
 
     Column(
@@ -30,6 +36,7 @@ fun SettingsScreen(
             Section("appearance")
             Toggle("battery in peak widget", prefs.showBattery) { update { prefs.showBattery = it } }
             Toggle("weather in peak widget", prefs.showWeather) { update { prefs.showWeather = it } }
+            if (prefs.showWeather) WeatherLocationSetting(prefs) { update {} }
             Toggle("peak widget right-aligned", prefs.peakRight) { update { prefs.peakRight = it } }
             Choice("peak variant", listOf("time+date", "one line", "stacked"), prefs.peakVariant) { update { prefs.peakVariant = it } }
             Choice(
@@ -58,7 +65,58 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = Dim,
             )
+            Text("Weather data: MET Norway (CC BY 4.0)",
+                Modifier.clickable { uriHandler.openUri("https://api.met.no/doc/License") },
+                style = MaterialTheme.typography.labelSmall, color = DotIdle)
+            Text("Forecast adapted for compact display.",
+                Modifier.padding(bottom = 12.dp),
+                style = MaterialTheme.typography.labelSmall, color = DotIdle)
         }
+    }
+}
+
+@Composable
+private fun WeatherLocationSetting(prefs: Prefs, onChanged: () -> Unit) {
+    var query by remember { mutableStateOf(prefs.weatherLabel) }
+    var results by remember { mutableStateOf(emptyList<WeatherLocation>()) }
+    var searching by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+
+    Text("weather location", style = MaterialTheme.typography.bodySmall, color = Dim)
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        TextField(
+            query, { query = it }, Modifier.weight(1f), singleLine = true,
+            placeholder = { Text("city", color = DotIdle) },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Black, unfocusedContainerColor = Black,
+                cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = DotIdle,
+            ),
+        )
+        Text(if (searching) "…" else "search", Modifier.padding(start = 10.dp)
+            .clickable(enabled = !searching) {
+                if (query.isNotBlank()) scope.launch {
+                    searching = true
+                    results = Weather.searchLocations(query)
+                    searching = false
+                }
+            }, style = MaterialTheme.typography.bodyMedium, color = Accent)
+    }
+    if (results.isNotEmpty()) Text(
+        "Location data: Open-Meteo / GeoNames (CC BY 4.0); labels adapted for display.",
+        Modifier.clickable { uriHandler.openUri("https://creativecommons.org/licenses/by/4.0/") },
+        style = MaterialTheme.typography.labelSmall,
+        color = DotIdle,
+    )
+    results.forEach { location ->
+        Row48({
+            prefs.setWeatherLocation(location)
+            query = location.label
+            results = emptyList()
+            onChanged()
+            scope.launch { Weather.current(prefs) }
+        }) { Text(location.label, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

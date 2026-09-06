@@ -21,8 +21,7 @@ fun AgendaScreen(requestCalendar: () -> Unit) {
     val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
     val events = remember(granted) { if (granted) Agenda.upcoming(ctx) else emptyList() }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("agenda", center = true)
+    EdgeScreen("agenda") {
         if (!granted) {
             Card(Modifier.fillMaxWidth(), onClick = requestCalendar) {
                 Text("Allow calendar access", style = MaterialTheme.typography.bodyMedium, color = Accent)
