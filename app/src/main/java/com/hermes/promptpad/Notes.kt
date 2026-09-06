@@ -44,7 +44,7 @@ fun NotesScreen() {
     val current = notes.firstOrNull { it.id == open }
     if (current != null) {
         var confirmDelete by remember { mutableStateOf(false) }
-        NoteEditor(current, onChange = { persist(notes.toList()) }, back = { open = null }, onDelete = { confirmDelete = true })
+        NoteEditor(current, onChange = { store.saveNotes(notes) }, back = { open = null }, onDelete = { confirmDelete = true })
         if (confirmDelete) AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete note?") },

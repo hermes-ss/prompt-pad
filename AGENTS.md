@@ -25,7 +25,7 @@ Activity tracking and Focus/Monk restriction modes are intentionally purged, inc
 
 ## Deliberate simplifications (ponytail)
 - Settings only expose behavior wired into the app; delete unused flags and callbacks instead of preserving placeholders.
-- UI state collections stay immutable; persist through `Store` after each user change.
+- Use immutable list updates for row changes; persist mutable note field edits directly.
 - No weather feed: device is offline, the widget shows `—°` behind a toggle.
 - Hub excludes notification group summaries so messaging apps contribute one actionable row.
 - Notes/To-Do persist as JSON in SharedPreferences; completed To-Dos stay struck through until Clear. Swap for Room only if lists get large.
