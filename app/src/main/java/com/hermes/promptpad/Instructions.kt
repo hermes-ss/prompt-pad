@@ -3,6 +3,10 @@ package com.hermes.promptpad
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,7 +21,12 @@ fun InstructionsScreen(done: () -> Unit) {
         Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("prompt-pad", style = MaterialTheme.typography.headlineMedium)
+        Box(Modifier.fillMaxWidth()) {
+            Text("prompt-pad", Modifier.align(Alignment.Center), style = MaterialTheme.typography.headlineMedium)
+            IconButton(done, Modifier.align(Alignment.CenterEnd)) {
+                Icon(Icons.Outlined.Close, "Dismiss instructions", tint = Accent)
+            }
+        }
         Spacer(Modifier.height(28.dp))
         Instruction("Edit Home", "Long-press a blank area, then tap the date or an icon to replace it. Long-press again to leave edit mode.")
         Instruction("Launcher settings", "Swipe left on the Home screen, or tap the settings symbol in app search.")
