@@ -130,6 +130,12 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
         (ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     }
+    var weather by remember(prefs.showWeather, prefs.weatherLabel) {
+        mutableStateOf(if (prefs.showWeather) prefs.weatherCache() else null)
+    }
+    LaunchedEffect(prefs.showWeather, prefs.weatherLatitude, prefs.weatherLongitude, tick) {
+        weather = if (prefs.showWeather) Weather.current(prefs) else null
+    }
     val alignment = if (prefs.peakRight) Alignment.End else Alignment.Start
     Column(
         Modifier.fillMaxWidth().padding(start = if (prefs.peakRight) 0.dp else Dim2.cutoutLeft),
@@ -157,9 +163,8 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (prefs.showWeather) {
-                Icon(Icons.Outlined.WbSunny, null, Modifier.size(13.dp), tint = Accent)
-                Spacer(Modifier.width(5.dp))
-                Text("—°", style = MaterialTheme.typography.bodySmall)
+                Text(weather?.let { weatherText(it.temperatureC, it.symbolCode) } ?: "—",
+                    style = MaterialTheme.typography.bodySmall)
                 if (prefs.showBattery) Text("  ·  ", style = MaterialTheme.typography.bodySmall, color = DotIdle)
             }
             if (prefs.showBattery) {

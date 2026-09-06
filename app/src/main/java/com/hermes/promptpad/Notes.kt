@@ -1,6 +1,7 @@
 package com.hermes.promptpad
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,9 +9,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +29,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.TextFieldValue
@@ -43,8 +48,9 @@ fun NotesScreen() {
 
     val current = notes.firstOrNull { it.id == open }
     if (current != null) {
+        BackHandler { open = null }
         var confirmDelete by remember { mutableStateOf(false) }
-        NoteEditor(current, onChange = { store.saveNotes(notes) }, back = { open = null }, onDelete = { confirmDelete = true })
+        NoteEditor(current, onChange = { store.saveNotes(notes) }, onDelete = { confirmDelete = true })
         if (confirmDelete) AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete note?") },
@@ -55,8 +61,7 @@ fun NotesScreen() {
         return
     }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("notes", center = true)
+    EdgeScreen("notes") {
         Tabs(Store.FOLDERS, folder) { folder = it }
         Spacer(Modifier.height(Dim2.gap))
         Text("+ new note", Modifier.fillMaxWidth().heightIn(min = Dim2.touch).clickable {
@@ -80,12 +85,11 @@ fun NotesScreen() {
  * ponytail: markers over a span model — round-trips through plain-text storage for free.
  */
 @Composable
-fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () -> Unit) {
+fun NoteEditor(note: Note, onChange: () -> Unit, onDelete: () -> Unit) {
     val ctx = LocalContext.current
     var title by remember(note.id) { mutableStateOf(note.title) }
-    var body by remember(note.id) { mutableStateOf(TextFieldValue(note.body, TextRange(note.body.length))) }
+    var body by remember(note.id) { mutableStateOf(initialNoteBodyValue(note.body)) }
     var preview by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
 
     fun update(value: TextFieldValue) { body = value; note.body = value.text; onChange() }
     fun append(marker: String) = update(TextFieldValue(body.text + marker, TextRange(body.text.length + marker.length)))
@@ -94,8 +98,7 @@ fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () 
         putExtra(Intent.EXTRA_TEXT, noteShareText(note))
     }, "Sharing text"))
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("note", center = true)
+    EdgeScreen("note") {
         TextField(title, { title = it; note.title = it; onChange() }, Modifier.fillMaxWidth(),
             placeholder = { Text("title", color = DotIdle) }, singleLine = true,
             textStyle = MaterialTheme.typography.titleMedium,
@@ -112,28 +115,26 @@ fun NoteEditor(note: Note, onChange: () -> Unit, back: () -> Unit, onDelete: () 
                 placeholder = { Text("write…", color = DotIdle) }, colors = noteFieldColors())
         }
         Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("H" to "\n# ", "B" to "**b**", "I" to "_i_", "U" to "__u__").forEach { (l, m) ->
-                Text(l, Modifier.clickable { append(m) }.padding(8.dp),
-                    style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White)
+            horizontalArrangement = Arrangement.SpaceEvenly) {
+            listOf("H" to "\n# ", "B" to "**b**", "U" to "__u__").forEach { (l, m) ->
+                Text(l, Modifier.weight(1f).clickable { append(m) }.padding(8.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White,
+                    textAlign = TextAlign.Center)
             }
             listOf("•" to "-", "☐" to "[]").forEach { (label, marker) ->
-                Text(label, Modifier.clickable { update(insertListMarker(body, marker)) }.padding(8.dp),
-                    style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White)
+                Text(label, Modifier.weight(1f).clickable { update(insertListMarker(body, marker)) }.padding(8.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White,
+                    textAlign = TextAlign.Center)
             }
-            Text(if (preview) "edit" else "view", Modifier.clickable { preview = !preview }.padding(8.dp),
-                style = MaterialTheme.typography.bodySmall, color = Accent)
-            Box {
-                Text("more", Modifier.clickable { menu = true }.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall, color = Accent)
-                DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem({ Text("share") }, { menu = false; share() })
-                    DropdownMenuItem({ Text("delete") }, { menu = false; onDelete() })
-                }
-            }
+            Text(if (preview) "edit" else "view", Modifier.weight(1f).clickable { preview = !preview }.padding(8.dp),
+                style = MaterialTheme.typography.bodySmall, color = Accent, textAlign = TextAlign.Center)
+            IconButton(::share, Modifier.weight(1f)) { Icon(Icons.Outlined.Share, "Share note", tint = Accent) }
+            IconButton(onDelete, Modifier.weight(1f)) { Icon(Icons.Outlined.Delete, "Delete note", tint = Accent) }
         }
     }
 }
+
+fun initialNoteBodyValue(text: String) = TextFieldValue(text, TextRange.Zero)
 
 fun insertListMarker(value: TextFieldValue, marker: String): TextFieldValue {
     val inserted = "\n$marker "

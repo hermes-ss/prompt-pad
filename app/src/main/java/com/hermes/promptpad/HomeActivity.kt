@@ -15,7 +15,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.delay
 
-enum class Screen { Home, Drawer, Hub, Settings, Notes, Todo, Agenda }
+enum class Screen { Home, Drawer, Hub, Settings, Notes, Todo, Agenda, Instructions }
 
 class HomeActivity : ComponentActivity() {
     private lateinit var prefs: Prefs
@@ -26,9 +26,10 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        if (!prefs.instructionsSeen) screen = Screen.Instructions
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (screen != Screen.Home) { pendingKey = null; screen = Screen.Home }
+                if (screen != Screen.Home && screen != Screen.Instructions) { pendingKey = null; screen = Screen.Home }
             }
         })
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -42,7 +43,10 @@ class HomeActivity : ComponentActivity() {
                 val back = { screen = Screen.Home }
                 when (screen) {
                     Screen.Home -> HomeScreen(prefs, { screen = it }, tick)
-                    Screen.Drawer -> DrawerScreen(prefs, pendingKey.orEmpty()) { pendingKey = null; back() }
+                    Screen.Drawer -> DrawerScreen(prefs, pendingKey.orEmpty(), { pendingKey = null; back() }) {
+                        pendingKey = null
+                        screen = Screen.Settings
+                    }
                     Screen.Hub -> HubScreen()
                     Screen.Settings -> SettingsScreen(
                         prefs,
@@ -53,6 +57,10 @@ class HomeActivity : ComponentActivity() {
                     Screen.Notes -> NotesScreen()
                     Screen.Todo -> TodoScreen()
                     Screen.Agenda -> AgendaScreen { calendarPermission.launch(Manifest.permission.READ_CALENDAR) }
+                    Screen.Instructions -> InstructionsScreen {
+                        prefs.instructionsSeen = true
+                        screen = Screen.Home
+                    }
                 }
             }
         }
@@ -61,7 +69,7 @@ class HomeActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         pendingKey = null
-        screen = Screen.Home
+        screen = if (prefs.instructionsSeen) Screen.Home else Screen.Instructions
     }
 
     override fun onResume() {

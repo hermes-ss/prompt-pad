@@ -5,38 +5,44 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Reply
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
-private val FILTERS = listOf("All", "Messages", "Calls", "Emails", "Apps", "Flagged")
+val HUB_FILTERS = listOf("All", "Messages", "Calls", "Emails", "Starred")
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HubScreen() {
     val ctx = LocalContext.current
     var filter by remember { mutableIntStateOf(0) }
-    var expanded by remember { mutableStateOf<String?>(null) }
+    var replyingTo by remember { mutableStateOf<String?>(null) }
     val all = HubListener.items
     val shown = all.filter {
         when (filter) {
             1 -> it.kind == HubKind.MESSAGE
             2 -> it.kind == HubKind.CALL
             3 -> it.kind == HubKind.EMAIL
-            4 -> it.kind == HubKind.APP
-            5 -> it.flagged
+            4 -> it.starred
             else -> true
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("hub", center = true)
-        Tabs(FILTERS, filter) { filter = it }
+    EdgeScreen("hub") {
+        Tabs(HUB_FILTERS, filter) { filter = it }
         Spacer(Modifier.height(Dim2.gap))
         if (!HubListener.isEnabled(ctx)) {
             Card(Modifier.fillMaxWidth(), onClick = { HubListener.openSettings(ctx) }) {
@@ -48,33 +54,51 @@ fun HubScreen() {
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(shown, key = { it.key }) { item ->
-                Card(Modifier.fillMaxWidth(), onClick = { expanded = if (expanded == item.key) null else item.key }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        Text(if (item.flagged) "★" else "☆",
-                            Modifier.clickable {
-                                val i = all.indexOfFirst { it.key == item.key }
-                                if (i >= 0) all[i] = item.copy(flagged = !item.flagged)
-                            }.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium, color = Accent)
-                    }
-                    if (item.text.isNotBlank()) Text(item.text, style = MaterialTheme.typography.bodySmall, color = Dim)
-                    if (expanded == item.key) {
-                        if (item.reply != null) {
+                val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
+                    if (value == SwipeToDismissBoxValue.Settled) true
+                    else { HubListener.dismiss(item.key); false }
+                })
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {},
+                    enableDismissFromStartToEnd = true,
+                    enableDismissFromEndToStart = true,
+                ) {
+                    Card(Modifier.fillMaxWidth(), onClick = { HubListener.open(ctx, item) }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                            if (item.reply != null) {
+                                IconButton({ replyingTo = if (replyingTo == item.key) null else item.key }) {
+                                    Icon(Icons.AutoMirrored.Outlined.Reply, "Reply", tint = Accent)
+                                }
+                            }
+                            Text(if (item.starred) "★" else "☆",
+                                Modifier.clickable {
+                                    val i = all.indexOfFirst { it.key == item.key }
+                                    if (i >= 0) all[i] = item.copy(starred = !item.starred)
+                                }.padding(start = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium, color = Accent)
+                        }
+                        if (item.text.isNotBlank()) Text(item.text, style = MaterialTheme.typography.bodySmall, color = Dim)
+                        if (replyingTo == item.key && item.reply != null) {
                             var draft by remember(item.key) { mutableStateOf("") }
+                            fun send() {
+                                if (draft.isNotBlank() && HubListener.sendReply(ctx, item, draft)) replyingTo = null
+                            }
                             Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                TextField(draft, { draft = it }, Modifier.weight(1f),
+                                TextField(draft, { draft = it }, Modifier.weight(1f).onPreviewKeyEvent {
+                                    if (it.key == Key.Enter && it.type == KeyEventType.KeyDown) { send(); true } else false
+                                },
                                     placeholder = { Text("reply", style = MaterialTheme.typography.bodySmall, color = DotIdle) },
                                     singleLine = true, textStyle = MaterialTheme.typography.bodySmall,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                                    keyboardActions = KeyboardActions(onSend = { send() }),
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Black, unfocusedContainerColor = Black,
                                         cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = DotIdle))
-                                Text("send", Modifier.clickable {
-                                    if (draft.isNotBlank()) { HubListener.sendReply(ctx, item, draft); expanded = null }
-                                }.padding(start = 10.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+                                Text("send", Modifier.clickable { send() }.padding(start = 10.dp),
+                                    style = MaterialTheme.typography.bodyMedium, color = Accent)
                             }
-                        } else {
-                            Text("no inline reply available", style = MaterialTheme.typography.labelSmall, color = DotIdle)
                         }
                     }
                 }

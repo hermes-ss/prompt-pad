@@ -9,6 +9,7 @@ class Prefs(ctx: Context) {
 
     var showWeather: Boolean by BoolPref(p, "showWeather", false)
     var showBattery: Boolean by BoolPref(p, "showBattery", true)
+    var instructionsSeen: Boolean by BoolPref(p, "instructionsSeen", false)
     var peakRight: Boolean by BoolPref(p, "peakRight", false)
     var peakVariant: Int by IntPref(p, "peakVariant", 0)
     var textScale: Int by IntPref(p, "textScale", 100)
@@ -17,6 +18,37 @@ class Prefs(ctx: Context) {
     var peakApp: String
         get() = p.getString("peakApp", "promptpad:calendar")!!
         set(value) = p.edit().putString("peakApp", value).apply()
+
+    val weatherLabel: String get() = p.getString("weatherLabel", "").orEmpty()
+    val weatherLatitude: Double? get() = p.getString("weatherLatitude", null)?.toDoubleOrNull()
+    val weatherLongitude: Double? get() = p.getString("weatherLongitude", null)?.toDoubleOrNull()
+    val hasWeatherLocation: Boolean get() = weatherLatitude != null && weatherLongitude != null
+
+    fun setWeatherLocation(location: WeatherLocation) {
+        p.edit()
+            .putString("weatherLabel", location.label)
+            .putString("weatherLatitude", location.latitude.toString())
+            .putString("weatherLongitude", location.longitude.toString())
+            .remove("weatherTemperature").remove("weatherSymbol").remove("weatherFetchedAt")
+            .remove("weatherExpiresAt").remove("weatherLastModified")
+            .apply()
+    }
+
+    fun weatherCache(): WeatherCache? {
+        val temperature = p.getString("weatherTemperature", null)?.toDoubleOrNull() ?: return null
+        val symbol = p.getString("weatherSymbol", null) ?: return null
+        return WeatherCache(
+            temperature, symbol, p.getLong("weatherFetchedAt", 0), p.getLong("weatherExpiresAt", 0),
+            p.getString("weatherLastModified", "").orEmpty(),
+        )
+    }
+
+    fun saveWeatherCache(cache: WeatherCache) {
+        p.edit().putString("weatherTemperature", cache.temperatureC.toString())
+            .putString("weatherSymbol", cache.symbolCode)
+            .putLong("weatherFetchedAt", cache.fetchedAt).putLong("weatherExpiresAt", cache.expiresAt)
+            .putString("weatherLastModified", cache.lastModified).apply()
+    }
 
     var tiles: List<String>
         get() = p.getString("tiles", "")!!.split(",").filter { it.isNotBlank() }.take(4)

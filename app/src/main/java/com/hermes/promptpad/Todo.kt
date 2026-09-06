@@ -14,7 +14,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -25,11 +28,16 @@ fun TodoScreen() {
     val store = remember { Store(ctx) }
     var tasks by remember { mutableStateOf(store.tasks()) }
     var draft by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        focus.requestFocus()
+        keyboard?.show()
+    }
 
-    Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
-        Header("to do", center = true)
+    EdgeScreen("to do") {
         TextField(draft, { draft = it },
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().focusRequester(focus),
             placeholder = { Text("Add a task...", color = DotIdle) }, singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),

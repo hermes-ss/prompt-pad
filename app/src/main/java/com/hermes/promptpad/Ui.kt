@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /** Titan 2 Elite is 4.04in / 4:3 — compact paddings everywhere. */
@@ -54,18 +55,37 @@ fun Header(text: String, back: (() -> Unit)? = null, center: Boolean = false) {
 }
 
 @Composable
+fun EdgeScreen(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Box(Modifier.fillMaxSize().background(Black)) {
+        Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = Dim2.screen)) {
+            Spacer(Modifier.height(Dim2.touch))
+            content()
+        }
+        Text(
+            title,
+            Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
 fun Tabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(Modifier.fillMaxWidth()) {
         labels.forEachIndexed { i, l ->
             Text(
                 l,
                 Modifier
+                    .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(if (i == selected) Accent else Black)
                     .clickable { onSelect(i) }
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(horizontal = 2.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (i == selected) Black else Dim
+                color = if (i == selected) Black else Dim,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
             )
         }
     }

@@ -9,7 +9,8 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.compose.runtime.mutableStateListOf
 
-enum class HubKind { MESSAGE, CALL, EMAIL, APP }
+
+enum class HubKind { MESSAGE, CALL, EMAIL, OTHER }
 
 data class HubItem(
     val key: String,
@@ -19,15 +20,21 @@ data class HubItem(
     val postedAt: Long,
     val kind: HubKind,
     val reply: Pair<PendingIntent, RemoteInput>?,
-    val flagged: Boolean = false
+    val content: PendingIntent?,
+    val starred: Boolean = false,
 )
 
 /** ponytail: one in-memory list owned by the service; the Hub UI is only alive while the app is. */
 class HubListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
+        listener = this
         items.clear()
         activeNotifications?.forEach { add(it) }
+    }
+
+    override fun onListenerDisconnected() {
+        if (listener === this) listener = null
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) = add(sbn)
@@ -39,16 +46,21 @@ class HubListener : NotificationListenerService() {
     private fun add(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
         val n = sbn.notification
+        val previous = items.firstOrNull { it.key == sbn.key }
         items.removeAll { it.key == sbn.key }
         if (!shouldInclude(n.flags)) return
         val x = n.extras
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: return
         val text = x.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        items.add(0, HubItem(sbn.key, sbn.packageName, title, text, sbn.postTime, kindOf(sbn.packageName, n), replyOf(n)))
+        items.add(0, HubItem(
+            sbn.key, sbn.packageName, title, text, sbn.postTime,
+            kindOf(sbn.packageName, n), replyOf(n), n.contentIntent, previous?.starred ?: false,
+        ))
     }
 
     companion object {
         val items = mutableStateListOf<HubItem>()
+        @Volatile private var listener: HubListener? = null
 
         fun isEnabled(ctx: Context): Boolean =
             (android.provider.Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners") ?: "")
@@ -61,26 +73,53 @@ class HubListener : NotificationListenerService() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
+        fun isMessagingPackage(pkg: String): Boolean = pkg in setOf(
+            "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger", "org.telegram.messenger.web",
+        ) || pkg.contains("mms") || pkg.contains("messag")
+
         fun kindOf(pkg: String, n: Notification): HubKind = when {
             n.category == Notification.CATEGORY_CALL || n.category == Notification.CATEGORY_MISSED_CALL -> HubKind.CALL
             n.category == Notification.CATEGORY_EMAIL || pkg.contains("mail") -> HubKind.EMAIL
-            n.category == Notification.CATEGORY_MESSAGE || pkg.contains("mms") || pkg.contains("messag") -> HubKind.MESSAGE
-            else -> HubKind.APP
+            n.category == Notification.CATEGORY_MESSAGE || isMessagingPackage(pkg) -> HubKind.MESSAGE
+            else -> HubKind.OTHER
         }
 
         fun replyOf(n: Notification): Pair<PendingIntent, RemoteInput>? {
-            n.actions?.forEach { a ->
-                a.remoteInputs?.firstOrNull { it.allowFreeFormInput }?.let { return a.actionIntent to it }
+            n.actions?.forEach { action ->
+                action.remoteInputs?.firstOrNull { it.allowFreeFormInput }?.let { return action.actionIntent to it }
             }
             return null
         }
 
-        /** Sends [text] back through the notification's RemoteInput and drops the row. */
+        fun dismiss(key: String): Boolean {
+            val service = listener ?: return false
+            return runCatching {
+                // Removal is confirmed only by onNotificationRemoved.
+                service.cancelNotification(key)
+                true
+            }.getOrDefault(false)
+        }
+
+        fun open(ctx: Context, item: HubItem): Boolean = runCatching {
+            if (item.content != null) item.content.send()
+            else ctx.packageManager.getLaunchIntentForPackage(item.pkg)?.let {
+                ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } ?: return false
+            true
+        }.getOrDefault(false)
+
         fun sendReply(ctx: Context, item: HubItem, text: String): Boolean {
-            val (pi, ri) = item.reply ?: return false
+            val (pendingIntent, remoteInput) = item.reply ?: return false
             val intent = Intent()
-            RemoteInput.addResultsToIntent(arrayOf(ri), intent, android.os.Bundle().apply { putCharSequence(ri.resultKey, text) })
-            return runCatching { pi.send(ctx, 0, intent); items.removeAll { it.key == item.key }; true }.getOrDefault(false)
+            RemoteInput.addResultsToIntent(
+                arrayOf(remoteInput), intent,
+                android.os.Bundle().apply { putCharSequence(remoteInput.resultKey, text) },
+            )
+            return runCatching {
+                pendingIntent.send(ctx, 0, intent)
+                dismiss(item.key)
+                true
+            }.getOrDefault(false)
         }
     }
 }
