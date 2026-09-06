@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -184,7 +185,7 @@ fun GlanceRows(nav: (Screen) -> Unit, tick: Int, textScale: Int) {
             textScale = textScale,
         ) { nav(Screen.Agenda) }
         GlanceRow(
-            Icons.Outlined.FormatListBulleted,
+            Icons.AutoMirrored.Outlined.FormatListBulleted,
             open.firstOrNull()?.text ?: "no open tasks",
             if (open.size > 1) open.size else null,
             textScale = textScale,
@@ -217,7 +218,7 @@ private data class Native(val screen: Screen, val label: String, val icon: Image
 private val NATIVE = mapOf(
     "promptpad:notes" to Native(Screen.Notes, "Note", Icons.Outlined.Description),
     "promptpad:agenda" to Native(Screen.Agenda, "Event", Icons.Outlined.CalendarToday),
-    "promptpad:todo" to Native(Screen.Todo, "To Do", Icons.Outlined.FormatListBulleted),
+    "promptpad:todo" to Native(Screen.Todo, "To Do", Icons.AutoMirrored.Outlined.FormatListBulleted),
     "promptpad:hub" to Native(Screen.Hub, "Hub", Icons.Outlined.Inbox),
     "promptpad:settings" to Native(Screen.Settings, "Settings", Icons.Outlined.Tune),
 )

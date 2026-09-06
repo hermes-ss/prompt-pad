@@ -14,13 +14,10 @@ import androidx.compose.ui.unit.sp
 
 val Black = Color.Black
 val White = Color.White
-val Charcoal = Black
 val Accent = Color(0xFFFC7703)
 val DotIdle = Color(0xFF777777)
 val DotBad = Color(0xFFFF453A)
 val Dim = Color(0xFFE6E6E6)
-val Color0E = Black
-val Border = White
 
 private val LatoFamily = FontFamily(
     Font(R.font.lato_regular, FontWeight.Normal),

@@ -13,9 +13,9 @@ fun visibleNoteFolder(folder: String): String = if (folder == "Journals") "Perso
 class Store(ctx: Context) {
     private val p = ctx.getSharedPreferences("promptpad_data", Context.MODE_PRIVATE)
 
-    fun notes(): MutableList<Note> {
+    fun notes(): List<Note> {
         val a = JSONArray(p.getString("notes", "[]"))
-        return MutableList(a.length()) {
+        return List(a.length()) {
             val o = a.getJSONObject(it)
             Note(o.getLong("id"), visibleNoteFolder(o.getString("folder")), o.getString("title"), o.getString("body"))
         }
@@ -27,9 +27,9 @@ class Store(ctx: Context) {
         p.edit().putString("notes", a.toString()).apply()
     }
 
-    fun tasks(): MutableList<Task> {
+    fun tasks(): List<Task> {
         val a = JSONArray(p.getString("tasks", "[]"))
-        return MutableList(a.length()) {
+        return List(a.length()) {
             val o = a.getJSONObject(it)
             Task(o.getLong("id"), o.getString("text"), o.getBoolean("done"))
         }

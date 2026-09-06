@@ -37,9 +37,6 @@ fun SettingsScreen(
                 listOf("90%", "100%", "115%", "130%"),
                 listOf(90, 100, 115, 130).indexOf(prefs.textScale).coerceAtLeast(1),
             ) { update { prefs.textScale = listOf(90, 100, 115, 130)[it] } }
-            Toggle("left-handed layout", prefs.leftHanded) { update { prefs.leftHanded = it } }
-            Toggle("reduce motion", prefs.reduceMotion) { update { prefs.reduceMotion = it } }
-
             Section("gestures and system bars")
             Toggle("tap blank area twice to sleep", prefs.tapToSleep) { enabled ->
                 update { prefs.tapToSleep = enabled }

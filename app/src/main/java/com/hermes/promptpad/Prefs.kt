@@ -11,8 +11,6 @@ class Prefs(ctx: Context) {
     var showBattery: Boolean by BoolPref(p, "showBattery", true)
     var peakRight: Boolean by BoolPref(p, "peakRight", false)
     var peakVariant: Int by IntPref(p, "peakVariant", 0)
-    var leftHanded: Boolean by BoolPref(p, "leftHanded", false)
-    var reduceMotion: Boolean by BoolPref(p, "reduceMotion", true)
     var textScale: Int by IntPref(p, "textScale", 100)
     var tapToSleep: Boolean by BoolPref(p, "tapToSleep", false)
     var hideStatusBar: Boolean by BoolPref(p, "hideStatusBar", false)

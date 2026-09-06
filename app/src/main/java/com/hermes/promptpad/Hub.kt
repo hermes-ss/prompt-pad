@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 private val FILTERS = listOf("All", "Messages", "Calls", "Emails", "Apps", "Flagged")
 
 @Composable
-fun HubScreen(back: () -> Unit) {
+fun HubScreen() {
     val ctx = LocalContext.current
-    var filter by remember { mutableStateOf(0) }
+    var filter by remember { mutableIntStateOf(0) }
     var expanded by remember { mutableStateOf<String?>(null) }
     val all = HubListener.items
     val shown = all.filter {
@@ -52,9 +52,10 @@ fun HubScreen(back: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(item.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                         Text(if (item.flagged) "★" else "☆",
-                            Modifier.clickable { item.flagged = !item.flagged
+                            Modifier.clickable {
                                 val i = all.indexOfFirst { it.key == item.key }
-                                if (i >= 0) all[i] = item.copy() }.padding(start = 8.dp),
+                                if (i >= 0) all[i] = item.copy(flagged = !item.flagged)
+                            }.padding(start = 8.dp),
                             style = MaterialTheme.typography.bodyMedium, color = Accent)
                     }
                     if (item.text.isNotBlank()) Text(item.text, style = MaterialTheme.typography.bodySmall, color = Dim)

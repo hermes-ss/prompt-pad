@@ -11,8 +11,6 @@ import java.util.Locale
 data class Event(val id: Long, val title: String, val begin: Long, val location: String?)
 
 object Agenda {
-    private val fmt = SimpleDateFormat("EEE d MMM · HH:mm", Locale.getDefault())
-
     fun upcoming(ctx: Context, days: Int = 7): List<Event> {
         val now = System.currentTimeMillis()
         val end = now + days * 86_400_000L
@@ -31,7 +29,7 @@ object Agenda {
         return out
     }
 
-    fun when_(e: Event): String = fmt.format(Date(e.begin))
+    fun when_(e: Event): String = SimpleDateFormat("EEE d MMM · HH:mm", Locale.getDefault()).format(Date(e.begin))
 
     /** Standard geo: intent — whatever map app the user has handles it. */
     fun navigate(ctx: Context, location: String) {

@@ -24,6 +24,8 @@ Swipe up = profile-aware drawer (personal + managed work apps, badged icons, aut
 Activity tracking and Focus/Monk restriction modes are intentionally purged, including their permissions, preferences, settings, service, resources, and tests.
 
 ## Deliberate simplifications (ponytail)
+- Settings only expose behavior wired into the app; delete unused flags and callbacks instead of preserving placeholders.
+- UI state collections stay immutable; persist through `Store` after each user change.
 - No weather feed: device is offline, the widget shows `—°` behind a toggle.
 - Hub excludes notification group summaries so messaging apps contribute one actionable row.
 - Notes/To-Do persist as JSON in SharedPreferences; completed To-Dos stay struck through until Clear. Swap for Room only if lists get large.

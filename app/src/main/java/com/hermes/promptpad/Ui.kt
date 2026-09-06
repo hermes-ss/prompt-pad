@@ -25,7 +25,7 @@ fun Card(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: 
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Charcoal)
+            .background(Black)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         content = content
@@ -61,7 +61,7 @@ fun Tabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                 l,
                 Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (i == selected) Accent else Charcoal)
+                    .background(if (i == selected) Accent else Black)
                     .clickable { onSelect(i) }
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.bodySmall,
@@ -70,7 +70,3 @@ fun Tabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
         }
     }
 }
-
-/** Left-handed mode pulls interactive content toward the left margin. */
-fun Modifier.hand(prefs: Prefs): Modifier =
-    if (prefs.leftHanded) this.padding(end = 24.dp) else this.padding(start = 12.dp)

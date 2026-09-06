@@ -14,44 +14,40 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun TodoScreen(back: () -> Unit, autoFocusAdd: Boolean = false) {
+fun TodoScreen() {
     val ctx = LocalContext.current
     val store = remember { Store(ctx) }
     var tasks by remember { mutableStateOf(store.tasks()) }
     var draft by remember { mutableStateOf("") }
-    val fr = remember { FocusRequester() }
-    if (autoFocusAdd) LaunchedEffect(Unit) { fr.requestFocus() }
 
     Column(Modifier.fillMaxSize().background(Black).safeDrawingPadding().padding(horizontal = Dim2.screen)) {
         Header("to do", center = true)
         TextField(draft, { draft = it },
-            Modifier.fillMaxWidth().focusRequester(fr),
+            Modifier.fillMaxWidth(),
             placeholder = { Text("Add a task...", color = DotIdle) }, singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
                 if (draft.isNotBlank()) {
-                    val next = (tasks + Task(System.currentTimeMillis(), draft.trim(), false)).toMutableList()
+                    val next = tasks + Task(System.currentTimeMillis(), draft.trim(), false)
                     store.saveTasks(next); tasks = next; draft = ""
                 }
             }),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Charcoal, unfocusedContainerColor = Charcoal,
-                cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = Charcoal))
+                focusedContainerColor = Black, unfocusedContainerColor = Black,
+                cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = Black))
         Spacer(Modifier.height(Dim2.gap))
         LazyColumn(Modifier.weight(1f)) {
             items(tasks, key = { it.id }) { t ->
                 Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch)
                     .clickable {
-                        tasks = toggleTask(tasks, t.id).toMutableList()
+                        tasks = toggleTask(tasks, t.id)
                         store.saveTasks(tasks)
                     }, verticalAlignment = Alignment.CenterVertically) {
                     Text(if (t.done) "☑" else "☐", Modifier.padding(end = 10.dp),
@@ -63,7 +59,7 @@ fun TodoScreen(back: () -> Unit, autoFocusAdd: Boolean = false) {
             }
         }
         Text("Clear", Modifier.align(Alignment.End).heightIn(min = Dim2.touch).clickable {
-            tasks = clearDone(tasks).toMutableList(); store.saveTasks(tasks)
+            tasks = clearDone(tasks); store.saveTasks(tasks)
         }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
     }
 }

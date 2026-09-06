@@ -32,24 +32,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun NotesScreen(back: () -> Unit) {
+fun NotesScreen() {
     val ctx = LocalContext.current
     val store = remember { Store(ctx) }
     var notes by remember { mutableStateOf(store.notes()) }
-    var folder by remember { mutableStateOf(0) }
+    var folder by remember { mutableIntStateOf(0) }
     var open by remember { mutableStateOf<Long?>(null) }
 
-    fun persist(list: MutableList<Note>) { notes = list; store.saveNotes(list) }
+    fun persist(list: List<Note>) { notes = list; store.saveNotes(list) }
 
     val current = notes.firstOrNull { it.id == open }
     if (current != null) {
         var confirmDelete by remember { mutableStateOf(false) }
-        NoteEditor(current, onChange = { persist(notes.toMutableList()) }, back = { open = null }, onDelete = { confirmDelete = true })
+        NoteEditor(current, onChange = { persist(notes.toList()) }, back = { open = null }, onDelete = { confirmDelete = true })
         if (confirmDelete) AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete note?") },
             text = { Text("This cannot be undone.") },
-            confirmButton = { TextButton(onClick = { persist(notes.filterNot { it.id == current.id }.toMutableList()); open = null }) { Text("Delete") } },
+            confirmButton = { TextButton(onClick = { persist(notes.filterNot { it.id == current.id }); open = null }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
         return
@@ -61,7 +61,7 @@ fun NotesScreen(back: () -> Unit) {
         Spacer(Modifier.height(Dim2.gap))
         Text("+ new note", Modifier.fillMaxWidth().heightIn(min = Dim2.touch).clickable {
             val n = Note(System.currentTimeMillis(), Store.FOLDERS[folder], "", "")
-            persist((notes + n).toMutableList()); open = n.id
+            persist(notes + n); open = n.id
         }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(notes.filter { it.folder == Store.FOLDERS[folder] }, key = { it.id }) { n ->
@@ -184,5 +184,5 @@ fun inline(s: String, strike: Boolean = false) = buildAnnotatedString {
 @Composable
 private fun noteFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = Black, unfocusedContainerColor = Black,
-    cursorColor = Accent, focusedIndicatorColor = Charcoal, unfocusedIndicatorColor = Black
+    cursorColor = Accent, focusedIndicatorColor = Black, unfocusedIndicatorColor = Black
 )

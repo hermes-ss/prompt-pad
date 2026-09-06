@@ -43,16 +43,16 @@ class HomeActivity : ComponentActivity() {
                 when (screen) {
                     Screen.Home -> HomeScreen(prefs, { screen = it }, tick)
                     Screen.Drawer -> DrawerScreen(prefs, pendingKey.orEmpty()) { pendingKey = null; back() }
-                    Screen.Hub -> HubScreen(back)
+                    Screen.Hub -> HubScreen()
                     Screen.Settings -> SettingsScreen(
                         prefs,
                         back,
                         ::openAccessibility,
                         ::applyStatusBar,
                     ) { preferenceVersion++ }
-                    Screen.Notes -> NotesScreen(back)
-                    Screen.Todo -> TodoScreen(back)
-                    Screen.Agenda -> AgendaScreen(back) { calendarPermission.launch(Manifest.permission.READ_CALENDAR) }
+                    Screen.Notes -> NotesScreen()
+                    Screen.Todo -> TodoScreen()
+                    Screen.Agenda -> AgendaScreen { calendarPermission.launch(Manifest.permission.READ_CALENDAR) }
                 }
             }
         }

@@ -19,7 +19,7 @@ data class HubItem(
     val postedAt: Long,
     val kind: HubKind,
     val reply: Pair<PendingIntent, RemoteInput>?,
-    var flagged: Boolean = false
+    val flagged: Boolean = false
 )
 
 /** ponytail: one in-memory list owned by the service; the Hub UI is only alive while the app is. */

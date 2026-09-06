@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 
 @Composable
-fun AgendaScreen(back: () -> Unit, requestCalendar: () -> Unit) {
+fun AgendaScreen(requestCalendar: () -> Unit) {
     val ctx = LocalContext.current
     val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
     val events = remember(granted) { if (granted) Agenda.upcoming(ctx) else emptyList() }
