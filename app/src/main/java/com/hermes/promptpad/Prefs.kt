@@ -15,9 +15,16 @@ class Prefs(ctx: Context) {
     var textScale: Int by IntPref(p, "textScale", 100)
     var tapToSleep: Boolean by BoolPref(p, "tapToSleep", false)
     var hideStatusBar: Boolean by BoolPref(p, "hideStatusBar", false)
+    var notifierEnabled: Boolean by BoolPref(p, "notifierEnabled", true)
     var peakApp: String
         get() = p.getString("peakApp", "promptpad:calendar")!!
         set(value) = p.edit().putString("peakApp", value).apply()
+    var weatherApp: String
+        get() = p.getString("weatherApp", "").orEmpty()
+        set(value) = p.edit().putString("weatherApp", value).apply()
+    var clockApp: String
+        get() = p.getString("clockApp", "promptpad:clock")!!
+        set(value) = p.edit().putString("clockApp", value).apply()
 
     val weatherLabel: String get() = p.getString("weatherLabel", "").orEmpty()
     val weatherLatitude: Double? get() = p.getString("weatherLatitude", null)?.toDoubleOrNull()

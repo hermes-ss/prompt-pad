@@ -3,6 +3,8 @@ package com.hermes.promptpad
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,7 +28,7 @@ val HUB_FILTERS = listOf("All", "Messages", "Calls", "Emails", "Starred")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HubScreen() {
+fun HubScreen(back: () -> Unit) {
     val ctx = LocalContext.current
     var filter by remember { mutableIntStateOf(0) }
     var replyingTo by remember { mutableStateOf<String?>(null) }
@@ -41,7 +43,14 @@ fun HubScreen() {
         }
     }
 
-    EdgeScreen("hub") {
+    EdgeScreen("notifier", Modifier.pointerInput(Unit) {
+        var distance = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { distance = 0f },
+            onHorizontalDrag = { _, dx -> distance += dx },
+            onDragEnd = { if (distance < -80.dp.toPx()) back() },
+        )
+    }) {
         Tabs(HUB_FILTERS, filter) { filter = it }
         Spacer(Modifier.height(Dim2.gap))
         if (!HubListener.isEnabled(ctx)) {
@@ -80,6 +89,7 @@ fun HubScreen() {
                                 style = MaterialTheme.typography.bodyMedium, color = Accent)
                         }
                         if (item.text.isNotBlank()) Text(item.text, style = MaterialTheme.typography.bodySmall, color = Dim)
+                        item.replies.forEach { Text("You: $it", style = MaterialTheme.typography.bodySmall, color = Accent) }
                         if (replyingTo == item.key && item.reply != null) {
                             var draft by remember(item.key) { mutableStateOf("") }
                             fun send() {

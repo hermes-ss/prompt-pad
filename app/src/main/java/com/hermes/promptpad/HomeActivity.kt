@@ -47,7 +47,7 @@ class HomeActivity : ComponentActivity() {
                         pendingKey = null
                         screen = Screen.Settings
                     }
-                    Screen.Hub -> HubScreen()
+                    Screen.Hub -> HubScreen(back)
                     Screen.Settings -> SettingsScreen(
                         prefs,
                         back,
@@ -55,7 +55,7 @@ class HomeActivity : ComponentActivity() {
                         ::applyStatusBar,
                     ) { preferenceVersion++ }
                     Screen.Notes -> NotesScreen()
-                    Screen.Todo -> TodoScreen()
+                    Screen.Todo -> TodoScreen(back)
                     Screen.Agenda -> AgendaScreen { calendarPermission.launch(Manifest.permission.READ_CALENDAR) }
                     Screen.Instructions -> InstructionsScreen {
                         prefs.instructionsSeen = true
