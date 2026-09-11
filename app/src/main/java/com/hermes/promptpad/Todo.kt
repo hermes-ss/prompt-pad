@@ -62,11 +62,6 @@ fun TodoScreen(back: () -> Unit) {
                 focusedContainerColor = Black, unfocusedContainerColor = Black,
                 cursorColor = Accent, focusedIndicatorColor = Accent, unfocusedIndicatorColor = Black))
         Spacer(Modifier.height(Dim2.gap))
-        Text(if (reordering) "done" else "reorder", Modifier.heightIn(min = Dim2.touch)
-            .clickable {
-                reordering = !reordering
-                if (reordering) { focusManager.clearFocus(); keyboard?.hide() }
-            }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
         LazyColumn(Modifier.weight(1f).orangeScrollbar(listState).padding(end = 6.dp), state = listState) {
             items(tasks, key = { it.id }) { t ->
                 Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch)
@@ -90,9 +85,17 @@ fun TodoScreen(back: () -> Unit) {
                 }
             }
         }
-        Text("Clear", Modifier.align(Alignment.End).heightIn(min = Dim2.touch).clickable {
-            tasks = clearDone(tasks); store.saveTasks(tasks)
-        }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (reordering) "done" else "reorder", Modifier.heightIn(min = Dim2.touch)
+                .clickable {
+                    reordering = !reordering
+                    if (reordering) { focusManager.clearFocus(); keyboard?.hide() }
+                }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+            Spacer(Modifier.weight(1f))
+            Text("Clear", Modifier.heightIn(min = Dim2.touch).clickable {
+                tasks = clearDone(tasks); store.saveTasks(tasks)
+            }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+        }
     }
 }
 
