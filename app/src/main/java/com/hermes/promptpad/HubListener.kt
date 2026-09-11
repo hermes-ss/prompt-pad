@@ -1,5 +1,7 @@
 package com.hermes.promptpad
 
+import android.app.ActivityOptions
+import android.os.Build
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.RemoteInput
@@ -22,6 +24,7 @@ data class HubItem(
     val reply: Pair<PendingIntent, RemoteInput>?,
     val content: PendingIntent?,
     val starred: Boolean = false,
+    val replies: List<String> = emptyList(),
 )
 
 /** ponytail: one in-memory list owned by the service; the Hub UI is only alive while the app is. */
@@ -51,10 +54,15 @@ class HubListener : NotificationListenerService() {
         if (!shouldInclude(n.flags)) return
         val x = n.extras
         val title = x.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: return
-        val text = x.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+        val incoming = x.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+            ?: x.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+        val replies = previous?.replies.orEmpty()
+        // ponytail: keep the conversation only while this system notification lives.
+        val text = if (replies.isEmpty()) incoming else
+            (previous!!.text.lines() + incoming.lines().filterNot { it in replies }).distinct().joinToString("\n")
         items.add(0, HubItem(
             sbn.key, sbn.packageName, title, text, sbn.postTime,
-            kindOf(sbn.packageName, n), replyOf(n), n.contentIntent, previous?.starred ?: false,
+            kindOf(sbn.packageName, n), replyOf(n), n.contentIntent, previous?.starred ?: false, replies,
         ))
     }
 
@@ -100,16 +108,28 @@ class HubListener : NotificationListenerService() {
             }.getOrDefault(false)
         }
 
-        fun open(ctx: Context, item: HubItem): Boolean = runCatching {
-            if (item.content != null) item.content.send()
-            else ctx.packageManager.getLaunchIntentForPackage(item.pkg)?.let {
-                ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            } ?: return false
-            true
-        }.getOrDefault(false)
+        fun open(ctx: Context, item: HubItem): Boolean {
+            // Android blocks notification trampolines; non-activity intents use the app fallback.
+            item.content?.takeIf { Build.VERSION.SDK_INT < 31 || it.isActivity }?.let { pending ->
+                val options = ActivityOptions.makeBasic().apply {
+                    // Android 14+ requires sender opt-in for another app's activity.
+                    if (Build.VERSION.SDK_INT >= 36)
+                        setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_IF_VISIBLE)
+                    else if (Build.VERSION.SDK_INT >= 34)
+                        setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                }
+                if (runCatching { pending.send(ctx, 0, null, null, null, null, options.toBundle()) }.isSuccess) return true
+            }
+            return runCatching {
+                val launch = ctx.packageManager.getLaunchIntentForPackage(item.pkg) ?: return false
+                ctx.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            }.getOrDefault(false)
+        }
 
         fun sendReply(ctx: Context, item: HubItem, text: String): Boolean {
             val (pendingIntent, remoteInput) = item.reply ?: return false
+            if (text.isBlank()) return false
             val intent = Intent()
             RemoteInput.addResultsToIntent(
                 arrayOf(remoteInput), intent,
@@ -117,7 +137,8 @@ class HubListener : NotificationListenerService() {
             )
             return runCatching {
                 pendingIntent.send(ctx, 0, intent)
-                dismiss(item.key)
+                val index = items.indexOfFirst { it.key == item.key }
+                if (index >= 0) items[index] = items[index].let { it.copy(replies = it.replies + text) }
                 true
             }.getOrDefault(false)
         }

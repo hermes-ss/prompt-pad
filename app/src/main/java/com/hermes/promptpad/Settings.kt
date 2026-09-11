@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+internal fun textScaleIndex(scale: Int): Int = listOf(90, 100, 115, 130).indexOf(scale).let { if (it < 0) 1 else it }
+
 @Composable
 fun SettingsScreen(
     prefs: Prefs,
@@ -42,9 +44,10 @@ fun SettingsScreen(
             Choice(
                 "text size",
                 listOf("90%", "100%", "115%", "130%"),
-                listOf(90, 100, 115, 130).indexOf(prefs.textScale).coerceAtLeast(1),
+                textScaleIndex(prefs.textScale),
             ) { update { prefs.textScale = listOf(90, 100, 115, 130)[it] } }
             Section("gestures and system bars")
+            Toggle("notifier", prefs.notifierEnabled) { update { prefs.notifierEnabled = it } }
             Toggle("tap blank area twice to sleep", prefs.tapToSleep) { enabled ->
                 update { prefs.tapToSleep = enabled }
                 if (enabled) openAccessibility()

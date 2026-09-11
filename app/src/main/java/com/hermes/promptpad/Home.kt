@@ -45,14 +45,14 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
 
     Box(
         Modifier.fillMaxSize().background(Black)
-            .pointerInput(Unit) {
+            .pointerInput(prefs.notifierEnabled) {
                 var dx = 0f; var dy = 0f
                 detectDragGestures(
                     onDragStart = { dx = 0f; dy = 0f },
                     onDragEnd = {
                         when {
                             dy < -120f && kotlin.math.abs(dy) > kotlin.math.abs(dx) -> nav(Screen.Drawer)
-                            dx > 120f -> nav(Screen.Hub)
+                            dx > 120f && prefs.notifierEnabled -> nav(Screen.Hub)
                             dx < -120f -> nav(Screen.Settings)
                         }
                     },
@@ -65,7 +65,7 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
                 )
             }
             .then(
-                if (prefs.peakRight) {
+                if (prefs.hideStatusBar && prefs.peakRight) {
                     Modifier.windowInsetsPadding(
                         WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
                     )
@@ -76,14 +76,14 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
     ) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(if (prefs.peakRight) 8.dp else 14.dp))
-            PeakWidget(prefs, tick, nav, editing) { picking = 4 }
+            PeakWidget(prefs, tick, nav, editing) { picking = it }
             Spacer(Modifier.height(16.dp))
             GlanceRows(nav, tick, prefs.textScale)
             Spacer(Modifier.weight(1f))
             AppGrid(prefs, editing, nav) { picking = it }
             if (editing) {
                 Text(
-                    "edit mode · tap date or icon to replace · long-press to exit",
+                    "edit mode · tap date, clock, weather or icon to replace · long-press to exit",
                     Modifier.fillMaxWidth().padding(top = 6.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = Accent,
@@ -97,7 +97,12 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
     if (picking >= 0) {
         AppPicker(
             onPick = { spec ->
-                if (picking == 4) prefs.peakApp = spec else prefs.setTile(picking, spec, DEFAULT_TILES)
+                when (picking) {
+                    4 -> prefs.peakApp = spec
+                    5 -> prefs.weatherApp = spec
+                    6 -> prefs.clockApp = spec
+                    else -> prefs.setTile(picking, spec, DEFAULT_TILES)
+                }
                 picking = -1; editing = false
             },
             onDismiss = { picking = -1 },
@@ -106,26 +111,25 @@ fun HomeScreen(prefs: Prefs, nav: (Screen) -> Unit, tick: Int) {
 }
 
 @Composable
-fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean, onEdit: () -> Unit) {
+fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean, onEdit: (Int) -> Unit) {
     val ctx = LocalContext.current
     val now = remember(tick) { Date() }
     fun format(pattern: String) = SimpleDateFormat(pattern, Locale.getDefault()).format(now).lowercase()
-    fun openDate() {
-        val key = prefs.peakApp
+    fun openShortcut(key: String, index: Int) {
         val native = NATIVE[key]
         val system = SYSTEM[key]
         when {
-            editing -> onEdit()
-            native != null -> nav(native.screen)
+            editing || key.isEmpty() -> onEdit(index)
+            native != null -> if (native.screen != Screen.Hub || prefs.notifierEnabled) nav(native.screen)
             system != null -> Apps.launchAction(ctx, system.third)
             else -> Apps.launch(ctx, key)
         }
     }
-    fun openClock() = Apps.launchAction(ctx, "android.intent.action.SHOW_ALARMS")
-    val dateShape = RoundedCornerShape(8.dp)
-    val dateModifier = Modifier
-        .then(if (editing) Modifier.border(2.dp, Accent, dateShape).padding(horizontal = 6.dp, vertical = 2.dp) else Modifier)
-        .clickable { openDate() }
+    val editModifier = if (editing) Modifier.border(2.dp, Accent, RoundedCornerShape(8.dp))
+        .padding(horizontal = 6.dp, vertical = 2.dp) else Modifier
+    val dateModifier = editModifier.clickable { openShortcut(prefs.peakApp, 4) }
+    val clockModifier = editModifier.clickable { openShortcut(prefs.clockApp, 6) }
+    val weatherModifier = editModifier.clickable { openShortcut(prefs.weatherApp, 5) }
     val battery = remember(tick) {
         (ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
@@ -146,11 +150,11 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
                 val date = "${format("EEEE")}, ${format("MMMM d")}  ·  "
                 Row {
                     Text(date, dateModifier, style = MaterialTheme.typography.headlineSmall)
-                    Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
+                    Text(format("HH:mm"), clockModifier, style = MaterialTheme.typography.headlineSmall, color = Accent)
                 }
             }
             2 -> {
-                Text(format("HH:mm"), Modifier.clickable { openClock() }, style = MaterialTheme.typography.headlineSmall, color = Accent)
+                Text(format("HH:mm"), clockModifier, style = MaterialTheme.typography.headlineSmall, color = Accent)
                 Text("${format("EEEE")}, ${format("MMMM d")}", dateModifier, style = MaterialTheme.typography.bodyMedium, color = Dim)
             }
             else -> {
@@ -164,6 +168,7 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (prefs.showWeather) {
                 Text(weather?.let { weatherText(it.temperatureC, it.symbolCode) } ?: "—",
+                    weatherModifier,
                     style = MaterialTheme.typography.bodySmall)
                 if (prefs.showBattery) Text("  ·  ", style = MaterialTheme.typography.bodySmall, color = DotIdle)
             }
@@ -172,7 +177,7 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
                 Spacer(Modifier.width(5.dp))
                 Text("$battery%", style = MaterialTheme.typography.bodySmall)
             }
-            if (prefs.peakVariant == 0) Text("   ${format("HH:mm")}", Modifier.clickable { openClock() }, style = MaterialTheme.typography.bodySmall, color = Accent)
+            if (prefs.peakVariant == 0) Text("   ${format("HH:mm")}", clockModifier, style = MaterialTheme.typography.bodySmall, color = Accent)
         }
     }
 }
@@ -180,7 +185,7 @@ fun PeakWidget(prefs: Prefs, tick: Int, nav: (Screen) -> Unit, editing: Boolean,
 @Composable
 fun GlanceRows(nav: (Screen) -> Unit, tick: Int, textScale: Int) {
     val ctx = LocalContext.current
-    val event = remember(tick) { runCatching { Agenda.upcoming(ctx, 2).firstOrNull() }.getOrNull() }
+    val event = remember(tick) { runCatching { Agenda.today(ctx).firstOrNull() }.getOrNull() }
     val open = remember(tick) { Store(ctx).tasks().filter { !it.done } }
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         GlanceRow(
@@ -224,7 +229,7 @@ private val NATIVE = mapOf(
     "promptpad:notes" to Native(Screen.Notes, "Note", Icons.Outlined.Description),
     "promptpad:agenda" to Native(Screen.Agenda, "Event", Icons.Outlined.CalendarToday),
     "promptpad:todo" to Native(Screen.Todo, "To Do", Icons.AutoMirrored.Outlined.FormatListBulleted),
-    "promptpad:hub" to Native(Screen.Hub, "Hub", Icons.Outlined.Inbox),
+    "promptpad:hub" to Native(Screen.Hub, "Notifier", Icons.Outlined.Inbox),
     "promptpad:settings" to Native(Screen.Settings, "Settings", Icons.Outlined.Tune),
 )
 
@@ -272,7 +277,7 @@ fun AppGrid(prefs: Prefs, editing: Boolean, nav: (Screen) -> Unit, onEdit: (Int)
             ) {
                 when {
                     editing -> onEdit(index)
-                    native != null -> nav(native.screen)
+                    native != null -> if (native.screen != Screen.Hub || prefs.notifierEnabled) nav(native.screen)
                     system != null -> Apps.launchAction(ctx, system.third)
                     app != null -> Apps.launch(ctx, app)
                     else -> Apps.launch(ctx, key)
