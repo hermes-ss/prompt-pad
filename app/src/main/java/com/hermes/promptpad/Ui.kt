@@ -114,7 +114,7 @@ fun EdgeScreen(title: String, modifier: Modifier = Modifier, heading: (@Composab
             Spacer(Modifier.height(Dim2.touch))
             content()
         }
-        Box(Modifier.fillMaxWidth().align(Alignment.TopCenter)) {
+        Box(Modifier.fillMaxWidth().statusBarsPadding().align(Alignment.TopCenter)) {
             if (heading != null) heading() else Text(
                 title, Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.headlineMedium,

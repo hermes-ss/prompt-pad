@@ -77,12 +77,14 @@ fun NotesScreen() {
     EdgeScreen("notes") {
         Tabs(Store.FOLDERS, folder) { folder = it }
         Spacer(Modifier.height(Dim2.gap))
-        Text("+ new note", Modifier.fillMaxWidth().heightIn(min = Dim2.touch).clickable {
-            val n = Note(System.currentTimeMillis(), Store.FOLDERS[folder], "", "")
-            persist(notes + n); open = n.id
-        }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
-        Text(if (reordering) "done" else "reorder", Modifier.heightIn(min = Dim2.touch)
-            .clickable { reordering = !reordering }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("+ new note", Modifier.weight(1f).heightIn(min = Dim2.touch).clickable {
+                val n = Note(System.currentTimeMillis(), Store.FOLDERS[folder], "", "")
+                persist(notes + n); open = n.id
+            }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+            Text(if (reordering) "done" else "reorder", Modifier.heightIn(min = Dim2.touch)
+                .clickable { reordering = !reordering }.padding(vertical = 12.dp), style = MaterialTheme.typography.bodyMedium, color = Accent)
+        }
         LazyColumn(Modifier.weight(1f).orangeScrollbar(listState).padding(end = 6.dp),
             state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(visible, key = { it.id }) { n ->
@@ -117,13 +119,17 @@ fun NoteEditor(note: Note, onChange: () -> Unit, onDelete: () -> Unit) {
     var body by remember(note.id) { mutableStateOf(initialNoteBodyValue(note.body)) }
     var preview by remember(note.id) { mutableStateOf(false) }
     val scroll = rememberScrollState()
-    val focus = remember { FocusRequester() }
+    val titleFocus = remember { FocusRequester() }
+    val bodyFocus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var editorTops by remember { mutableStateOf(listOf(0)) }
     val previewTops = remember { mutableStateMapOf<Int, Int>() }
     var restore by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     LaunchedEffect(note.id, preview) {
-        if (!preview) { focus.requestFocus(); keyboard?.show() }
+        if (!preview) {
+            (if (note.title.isEmpty() && note.body.isEmpty()) titleFocus else bodyFocus).requestFocus()
+            keyboard?.show()
+        }
     }
     LaunchedEffect(preview, editorTops, previewTops.toMap()) {
         val tops = if (preview) previewTops.toSortedMap().values.toList() else editorTops
@@ -144,7 +150,8 @@ fun NoteEditor(note: Note, onChange: () -> Unit, onDelete: () -> Unit) {
 
     EdgeScreen(title, heading = {
         BasicTextField(title, { title = it; note.title = it; onChange() },
-            Modifier.fillMaxWidth().heightIn(min = Dim2.touch).semantics { contentDescription = "Note title" },
+            Modifier.fillMaxWidth().heightIn(min = Dim2.touch).focusRequester(titleFocus)
+                .semantics { contentDescription = "Note title" },
             singleLine = true, cursorBrush = SolidColor(Accent),
             textStyle = MaterialTheme.typography.headlineMedium.copy(textAlign = TextAlign.Center),
             decorationBox = { field ->
@@ -169,7 +176,7 @@ fun NoteEditor(note: Note, onChange: () -> Unit, onDelete: () -> Unit) {
             } else {
                 Box(Modifier.fillMaxSize().verticalScroll(scroll).padding(end = 6.dp)) {
                     BasicTextField(body, ::update,
-                        Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = "Note body" },
+                        Modifier.fillMaxWidth().focusRequester(bodyFocus).semantics { contentDescription = "Note body" },
                         textStyle = MaterialTheme.typography.bodyMedium, cursorBrush = SolidColor(Accent),
                         onTextLayout = { layout ->
                             var offset = 0
@@ -187,11 +194,14 @@ fun NoteEditor(note: Note, onChange: () -> Unit, onDelete: () -> Unit) {
         }
         Row(Modifier.fillMaxWidth().heightIn(min = Dim2.touch), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly) {
-            listOf("H" to "\n# ", "B" to "**b**", "U" to "__u__").forEach { (l, m) ->
+            listOf("H" to "\n# ", "B" to "**b**").forEach { (l, m) ->
                 Text(l, Modifier.weight(1f).clickable { append(m) }.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White,
                     textAlign = TextAlign.Center)
             }
+            Text("<>", Modifier.weight(1f).clickable { update(insertCodeTicks(body)) }.padding(8.dp),
+                style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White,
+                textAlign = TextAlign.Center)
             listOf("•" to "-", "☐" to "[]").forEach { (label, marker) ->
                 Text(label, Modifier.weight(1f).clickable { update(insertListMarker(body, marker)) }.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium, color = if (preview) DotIdle else White,
@@ -227,6 +237,11 @@ fun insertListMarker(value: TextFieldValue, marker: String): TextFieldValue {
     val inserted = "\n$marker "
     val text = value.text.replaceRange(value.selection.min, value.selection.max, inserted)
     return TextFieldValue(text, TextRange(value.selection.min + inserted.length))
+}
+
+fun insertCodeTicks(value: TextFieldValue): TextFieldValue {
+    val at = value.selection.min
+    return TextFieldValue(value.text.replaceRange(at, value.selection.max, "``"), TextRange(at + 1))
 }
 
 fun noteShareText(note: Note) = listOf(note.title, note.body).filter(String::isNotBlank).joinToString("\n\n")

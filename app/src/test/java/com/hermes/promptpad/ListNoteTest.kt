@@ -1,5 +1,7 @@
 package com.hermes.promptpad
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -20,5 +22,10 @@ class ListNoteTest {
         assertEquals(52, noteScrollOffset(edit, noteScrollAnchor(preview, 90)))
         assertEquals(0, noteScrollOffset(emptyList(), 0 to 0))
         assertEquals(137, noteScrollOffset(preview, 2 to 500))
+    }
+
+    @Test fun codeCommandPlacesCursorBetweenTicks() {
+        assertEquals(TextFieldValue("a``b", TextRange(2)),
+            insertCodeTicks(TextFieldValue("ab", TextRange(1))))
     }
 }
